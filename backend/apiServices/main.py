@@ -55,22 +55,3 @@ def get_food_items():
         
     
     
-
-
-
-
-
-
-
-
-"""
-DB = "sql.db"
-
-def get_db_conn():
-    conn = sqlite3.connect(DB)
-    return conn
-
-def init_db():
-    con = get_db_conn()
-    con.execute
-    """
