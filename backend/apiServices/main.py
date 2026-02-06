@@ -10,8 +10,15 @@ from db.connector import initialize_db, get_db_connection, read_food_table
 
 
 app = FastAPI()
-
-"""@app.on_event("startup")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+"""
+@app.on_event("startup")
 def startup_event():
     initialize_db()
     print("Database initialized on startup")"""
@@ -26,32 +33,7 @@ def get_food_items():
     food_items = read_food_table()
     return {"food_items": food_items}
 
-    """initialize_db()  # Ensure DB is initialized
 
-    try:    
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM food")
-        rows = cursor.fetchall()    
-        food_dict = {}
-        for food in rows:
-            food_dict[food[0]] = {
-                "id": food[0],
-                "name": food[1],
-                "qty": food[2],
-                "barcode": food[3],
-                "added_date": food[4],
-                "category": food[5],
-            }
-        return {"food_items": food_dict.values()}
-
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-
-    finally:
-        if conn:
-            cursor.close()
-            conn.close()"""
         
     
     

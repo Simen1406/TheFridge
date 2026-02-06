@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 /*
 the next thing to do is create the api endpoints, connect it to frontend and then visualize
@@ -16,46 +16,45 @@ interface FoodItem {
 
 const FoodInventory: React.FC = () => {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - set immediately without loading states
+
   useEffect(() => {
-    const mockData: FoodItem[] = [
-      {
-        id: 1,
-        name: "Milk",
-        qty: 1,
-        barcode: "123456789",
-        added_date: "2025-09-12T10:30:00",
-        category: "Dairy"
-      },
-      {
-        id: 2,
-        name: "Bread",
-        qty: 1,
-        barcode: "987654321",
-        added_date: "2025-09-11T15:20:00",
-        category: "Bakery"
-      },
-      {
-        id: 3,
-        name: "Apples",
-        qty: 1,
-        barcode: "456789123",
-        added_date: "2025-09-10T09:15:00",
-        category: "Fruit"
-      }
-    ];
-    setFoodItems(mockData);
+    setLoading(true);
+    fetch('http://localhost:8000/food_items')
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        console.log('API Response:', data);
+        setFoodItems(Array.isArray(data.food_items) ? data.food_items : []);
+        setError(null);
+      })
+      .catch(error => {
+        setError(error.message);
+        setFoodItems([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
+  const safeItems = useMemo(() => {
+    return Array.isArray(foodItems) ? foodItems : [];
+  }, [foodItems]);
+
+  const totalQuantity = safeItems.reduce((sum, item) => sum + item.qty, 0);
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     });
+    } catch (error) {
+      return "invalid Date";
+    }
   };
 
   const getCategoryColor = (category: string | null) => {
@@ -71,6 +70,7 @@ const FoodInventory: React.FC = () => {
     return colors[category || ''] || 'bg-gray-100 text-gray-800';
   };
 
+  console.log('safeItems before render:', safeItems);
   return (
     <div className="bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -85,7 +85,7 @@ const FoodInventory: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Items</p>
-              <p className="text-2xl font-semibold text-gray-900">{foodItems.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{safeItems.length}</p>
             </div>
           </div>
 
@@ -93,7 +93,7 @@ const FoodInventory: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Total Quantity</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {foodItems.reduce((sum, item) => sum + item.qty, 0)}
+                {totalQuantity}
               </p>
             </div>
           </div>
@@ -102,7 +102,7 @@ const FoodInventory: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Categories</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {new Set(foodItems.map(item => item.category).filter(Boolean)).size}
+                {new Set(safeItems.map(item => item.category).filter(Boolean)).size}
               </p>
             </div>
           </div>
@@ -139,7 +139,7 @@ const FoodInventory: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {foodItems.map((item) => (
+                {safeItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{item.name}</div>
