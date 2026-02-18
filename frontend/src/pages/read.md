@@ -1,1 +1,0 @@
-All visible pages in the UI
