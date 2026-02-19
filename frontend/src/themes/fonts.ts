@@ -5,10 +5,10 @@
     navText: 16
 };
 
-export const fontTypes = {
+export const fontFamily = {
     header: "Times New Roman",
     body: "Arial",
-    navText: "Verdana"
+    navFont: "Verdana"
 };
 
 export const fontWeights = {
@@ -16,4 +16,4 @@ export const fontWeights = {
     medium: "500",
     small: "300",
     bold: "700"
-};
+}as const;
