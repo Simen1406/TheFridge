@@ -3,6 +3,7 @@ export const mockFridgeItems = [
     {
         id: 1,
         name: "Milk",
+        unit: "cartons",
         category: "Dairy",
         quantity: 1,
         price: 3.99,
@@ -11,6 +12,7 @@ export const mockFridgeItems = [
     {
         id: 2,
         name: "Eggs",
+        unit: "pieces",
         category: "Dairy",
         quantity: 12,
         price: 2.99,
@@ -18,7 +20,8 @@ export const mockFridgeItems = [
     },  
     {
         id: 3,
-        name: "Carrots",    
+        name: "Carrots",
+        unit: "pieces",
         category: "Vegetables",
         quantity: 5,
         price: 0.99,
