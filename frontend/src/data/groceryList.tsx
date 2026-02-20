@@ -10,7 +10,7 @@ export const mockGroceryItems = [
         id: 2,
         name: "Butter",
         quantity: 1,
-        unit: "stick",
+        unit: "block",
     },
     {
         id: 3,
