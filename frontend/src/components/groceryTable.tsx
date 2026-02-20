@@ -3,21 +3,19 @@ import { Text, View, StyleSheet } from "react-native";
 import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
 import { colors } from "@/themes/colors";
 
-export default function FridgeTable({ items }: {items: { id: number; name: string; quantity: number; unit: string; category: string; price: number; expirationDate: string }[] }) {
+export default function GroceryTable({ items }: {items: { id: number; name: string; quantity: number; unit: string; category: string }[] }) {
     return (
-        <View style={fridgeStyles.background}>
-            
-            <View style={fridgeStyles.container}>
-                <View style={fridgeStyles.title}>
-                    <Text style = {fridgeStyles.title}>🧊 Fridge Inventory</Text>
-                    <Text style = {fridgeStyles.subtext}>See what's in your fridge</Text>
+        <View style={groceryStyles.background}>
+            <View style={groceryStyles.container}>
+                <View style={groceryStyles.title}>
+                    <Text style = {groceryStyles.title}>🧊 Your Shopping List</Text>
+                    <Text style = {groceryStyles.subtext}>See what's in your shopping list</Text>
                 </View>
                 {items.map((item) => (
-                    <View key={item.id} style={fridgeStyles.row}>
-                        <Text style={fridgeStyles.itemText}>{item.name}</Text>
-                        <Text style={fridgeStyles.itemText}>{item.quantity} {item.unit}</Text>
-                        <Text style ={fridgeStyles.itemText}>${item.price.toFixed(2)}</Text>
-                        <Text style={fridgeStyles.itemText}>{item.expirationDate}</Text>
+                    <View key={item.id} style={groceryStyles.row}>
+                        <Text style={groceryStyles.itemText}>{item.name}</Text>
+                        <Text style={groceryStyles.itemText}>{item.quantity} {item.unit}</Text>
+                        <Text style = {groceryStyles.itemText}>{item.category}</Text>
                     </View>
                 ))}
             </View>
@@ -25,7 +23,7 @@ export default function FridgeTable({ items }: {items: { id: number; name: strin
     );    
 }
 
-const fridgeStyles = StyleSheet.create({
+const groceryStyles = StyleSheet.create({
     background: {
         width: "100%",
         height: "100%",
