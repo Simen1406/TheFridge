@@ -1,3 +1,4 @@
+import { colors } from "@/themes/colors";
 import { Text, View, StyleSheet } from "react-native";
 
 // Home page
@@ -18,7 +19,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 28,
@@ -27,11 +28,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    color: colors.darkGray,
     marginBottom: 20,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.primary,
+    alignSelf: "flex-start",
     padding: 16,
     borderRadius: 8,
     shadowColor: "#000",
