@@ -14,10 +14,10 @@ export default function SharedNav() {
                 <Link href="/(tabs)" style={styles.navLink}>
                     <Text style={styles.linkText}>Home</Text>
                 </Link>
-                <Link href="/(tabs)/fridgeInventory" style={styles.navLink}>
-                    <Text style={styles.linkText}>Inventory</Text>
+                <Link href="/(tabs)/Fridge" style={styles.navLink}>
+                    <Text style={styles.linkText}>My Fridge</Text>
                 </Link>
-                <Link href="/(tabs)/groceryList" style={styles.navLink}>
+                <Link href="/(tabs)/Groceries" style={styles.navLink}>
                     <Text style={styles.linkText}>Grocery List</Text>
                 </Link>    
             </View>
@@ -27,14 +27,14 @@ export default function SharedNav() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.background,
+        backgroundColor: colors.primary,
         height: 150,
         justifyContent: "center",
         alignItems: "center",
         padding: 10,
     },
     navTitle: {
-        color: colors.primary,
+        color: colors.lightGray,
         fontSize: fontSizes.navText,
         fontFamily: fontFamily.navFont,
         fontWeight: fontWeights.medium
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     linkText: {
-        color: colors.primary,
+        color: colors.lightGray,
         fontSize: fontSizes.navText
     },
 });
