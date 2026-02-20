@@ -1,5 +1,6 @@
  export const fontSizes = {
-    header: 20,
+    header: 28,
+    subtitle: 20,
     body: 14,
     small: 10,
     navText: 16
