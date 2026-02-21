@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field
 
-class FridgeItem(SQLModel):
+class Fridge(SQLModel):
     name: str
     category: str
     quantity: int
@@ -8,8 +8,8 @@ class FridgeItem(SQLModel):
     expiration_date: str
 
 
-class Item(SQLModel, table=True):
+class FridgeItem(Fridge, table=True):
     id: int = Field(nullable=False, primary_key=True)
 
-class AddItem(SQLModel):
+class AddItem(Fridge):
     pass
