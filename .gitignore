@@ -1,14 +1,13 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # Python virtual environments
-venv/
+backend/venv/
 env/
 ENV/
 
 # Environment files
 .env
 .env.*
-!.env.example
 .env*.local
 
 # Python cache and compiled files
