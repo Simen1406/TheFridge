@@ -13,3 +13,15 @@ class FridgeItem(Fridge, table=True):
 
 class AddItem(Fridge):
     pass
+
+class Groceries(SQLModel):
+    name: str
+    category: str
+    quantity: int
+    unit: str
+
+class GroceryItem(Groceries, table=True):
+    id: int = Field(nullable=False, primary_key=True)
+
+class addGroceryItem(Groceries):
+    pass
