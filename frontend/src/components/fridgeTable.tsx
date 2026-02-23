@@ -1,7 +1,8 @@
 // reuseable table for fridge and grocery list
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
 import { colors } from "@/themes/colors";
+
 
 export default function FridgeTable({ items }: {items: { id: number; name: string; quantity: number; unit: string; category: string; price: number; expirationDate: string }[] }) {
     return (
@@ -11,6 +12,9 @@ export default function FridgeTable({ items }: {items: { id: number; name: strin
                 <View style={fridgeStyles.title}>
                     <Text style = {fridgeStyles.title}>🧊 Fridge Inventory</Text>
                     <Text style = {fridgeStyles.subtext}>See what's in your fridge</Text>
+                    <TouchableOpacity onPress={() => console.log ("Add new item")} style={fridgeStyles.buttonContainer}>
+                        <Text style = {fridgeStyles.button}> + Add New Item </Text>
+                    </TouchableOpacity>
                 </View>
                 {items.map((item) => (
                     <View key={item.id} style={fridgeStyles.row}>
@@ -18,6 +22,9 @@ export default function FridgeTable({ items }: {items: { id: number; name: strin
                         <Text style={fridgeStyles.itemText}>{item.quantity} {item.unit}</Text>
                         <Text style ={fridgeStyles.itemText}>${item.price.toFixed(2)}</Text>
                         <Text style={fridgeStyles.itemText}>{item.expirationDate}</Text>
+                        <TouchableOpacity onPress={() => console.log(`Remove item with id ${item.id}`)} style={fridgeStyles.buttonContainer}>
+                            <Text style = {fridgeStyles.button}> Remove </Text>
+                        </TouchableOpacity>
                     </View>
                 ))}
             </View>
@@ -68,4 +75,13 @@ const fridgeStyles = StyleSheet.create({
         fontFamily: fontFamily.body,
         color: colors.darkGray
     },
+    button: {
+        fontSize: fontSizes.body,
+        fontFamily: fontFamily.body,
+        color: colors.primary,
+        textDecorationLine: "underline",
+    },
+    buttonContainer: {
+        padding: 4,
+    }
 });
