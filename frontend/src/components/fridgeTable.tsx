@@ -4,7 +4,7 @@ import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
 import { colors } from "@/themes/colors";
 
 
-export default function FridgeTable({ items, onAddPress }: {items: { id: number; name: string; quantity: number; unit: string; category: string; expirationDate: string }[], onAddPress: () => void }) {
+export default function FridgeTable({ items, onAddPress }: {items: { id: number; name: string; quantity: number; unit: string; category: string; expiration_date: string }[], onAddPress: () => void }) {
     return (
         <View style={fridgeStyles.background}>
             
@@ -20,7 +20,7 @@ export default function FridgeTable({ items, onAddPress }: {items: { id: number;
                     <View key={item.id} style={fridgeStyles.row}>
                         <Text style={fridgeStyles.itemText}>{item.name}</Text>
                         <Text style={fridgeStyles.itemText}>{item.quantity} {item.unit}</Text>
-                        <Text style={fridgeStyles.itemText}>{item.expirationDate}</Text>
+                        <Text style={fridgeStyles.itemText}>{item.expiration_date}</Text>
                         <TouchableOpacity onPress={() => console.log(`Remove item with id ${item.id}`)} style={fridgeStyles.buttonContainer}>
                             <Text style = {fridgeStyles.button}> Remove </Text>
                         </TouchableOpacity>

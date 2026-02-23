@@ -4,7 +4,7 @@ export type FridgeItem = {
     category: string;
     quantity: number;
     unit: string;
-    expirationDate: string;
+    expiration_date: string;
 };
 
 export type GroceryItem = {
@@ -13,5 +13,5 @@ export type GroceryItem = {
     category: string,
     quantity: number,
     unit: string,
-    expirationDate: string,
+    expiration_date: string,
 };
