@@ -1,4 +1,4 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 from db.db import engine
 from models.models import FridgeItem
 #create some mock data for testing api and frontend
@@ -11,7 +11,7 @@ mock_fridge_items = [
 
 def insert_mock_data(table_name: str):
     with Session(engine) as session:
-        items = session.exec("SELECT * FROM " + table_name).all()
+        items = session.exec(select(FridgeItem)).all()
         lst_items = list(items)
         if len(lst_items) > 0:
             print(f"{table_name} table already has data, skipping mock data insertion")
