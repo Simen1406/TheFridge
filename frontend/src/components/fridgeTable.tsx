@@ -4,7 +4,7 @@ import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
 import { colors } from "@/themes/colors";
 
 
-export default function FridgeTable({ items }: {items: { id: number; name: string; quantity: number; unit: string; category: string; price: number; expirationDate: string }[] }) {
+export default function FridgeTable({ items, onAddPress }: {items: { id: number; name: string; quantity: number; unit: string; category: string; expirationDate: string }[], onAddPress: () => void }) {
     return (
         <View style={fridgeStyles.background}>
             
@@ -12,7 +12,7 @@ export default function FridgeTable({ items }: {items: { id: number; name: strin
                 <View style={fridgeStyles.title}>
                     <Text style = {fridgeStyles.title}>🧊 Fridge Inventory</Text>
                     <Text style = {fridgeStyles.subtext}>See what's in your fridge</Text>
-                    <TouchableOpacity onPress={() => console.log ("Add new item")} style={fridgeStyles.buttonContainer}>
+                    <TouchableOpacity onPress={onAddPress} style={fridgeStyles.buttonContainer}>
                         <Text style = {fridgeStyles.button}> + Add New Item </Text>
                     </TouchableOpacity>
                 </View>
