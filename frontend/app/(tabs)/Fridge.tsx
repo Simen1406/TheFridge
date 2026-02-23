@@ -1,14 +1,15 @@
 import { Text, View, StyleSheet } from "react-native";
 import { useEffect, useState } from "react";
 
-
 import FridgeTable from "@/components/fridgeTable";
-import AddItemForm from "@/components/addItemForm";
+import AddItemForm from "@/components/fridgeItemForm";
+import  { FridgeItem, GroceryItem } from "@/types/foodTypes";
 import { api } from "@/services/api";
 import { colors } from "@/themes/colors";
 
+
 export default function FridgeInventory() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<FridgeItem[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function FridgeInventory() {
 
   return (
     <View style={styles.container}>
-      <FridgeTable items={items} />
+      <FridgeTable items={items} onAddPress={() => setShowAddForm(true)} />
       <AddItemForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
     </View>
   );
