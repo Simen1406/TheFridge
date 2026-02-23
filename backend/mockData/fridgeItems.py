@@ -11,10 +11,17 @@ mock_fridge_items = [
 
 def insert_mock_data(table_name: str):
     with Session(engine) as session:
-        for item in mock_fridge_items:
-            session.add(item)
-        session.commit()
-        print(f"Inserted {len(mock_fridge_items)} mock data into the {table_name} table")
+        items = session.exec("SELECT * FROM " + table_name).all()
+        lst_items = list(items)
+        if len(lst_items) > 0:
+            print(f"{table_name} table already has data, skipping mock data insertion")
+            return
+        
+        else:
+            for item in mock_fridge_items:
+                session.add(item)
+            session.commit()
+            print(f"Inserted {len(mock_fridge_items)} mock data into the {table_name} table")
 
 if __name__ == "__main__":
     insert_mock_data(table_name="fridge_items")
