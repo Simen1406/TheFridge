@@ -1,12 +1,14 @@
+from datetime import date
+
 from sqlmodel import Session, select
 from db.db import engine
 from models.models import FridgeItem
 #create some mock data for testing api and frontend
 
 mock_fridge_items = [
-    FridgeItem(name = "milk", category = "dairy", quantity=1, unit="liter", expiration_date="2024-07-01"),
-    FridgeItem(name = "eggs", category = "dairy", quantity=12, unit="pieces", expiration_date="2024-07-10"),
-    FridgeItem(name = "cheese", category = "dairy", quantity=200, unit="grams", expiration_date="2024-07-15"),
+    FridgeItem(name = "milk", category = "dairy", quantity=1, unit="liter", expiration_date=date(2024, 7, 1)),
+    FridgeItem(name = "eggs", category = "dairy", quantity=12, unit="pieces", expiration_date=date(2024, 7, 10)),
+    FridgeItem(name = "cheese", category = "dairy", quantity=200, unit="grams", expiration_date=date(2024, 7, 15)),
 ]
 
 def insert_mock_data(table_name: str):
