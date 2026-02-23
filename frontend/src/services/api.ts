@@ -7,7 +7,7 @@ export type NewFridgeItem = {
     category: string;
     quantity: string;    // turn into number before sending to backend
     unit: string;
-    expiration_date: string;
+    expiration_date: string;    
 };
 
 export const api = {
