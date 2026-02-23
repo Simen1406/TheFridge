@@ -32,7 +32,8 @@ async def pong():
 
 @app.get("/fridge-items")
 def get_fridge_items(session: Session = Depends(get_session)):
-    results = session.exec(select(FridgeItem)).all()
+    statement = select(FridgeItem).order_by(FridgeItem.expiration_date)   
+    results = session.exec(statement).all()
     print(type(results))
     return results
 
