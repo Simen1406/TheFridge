@@ -20,7 +20,6 @@ export default function FridgeTable({ items }: {items: { id: number; name: strin
                     <View key={item.id} style={fridgeStyles.row}>
                         <Text style={fridgeStyles.itemText}>{item.name}</Text>
                         <Text style={fridgeStyles.itemText}>{item.quantity} {item.unit}</Text>
-                        <Text style ={fridgeStyles.itemText}>${item.price.toFixed(2)}</Text>
                         <Text style={fridgeStyles.itemText}>{item.expirationDate}</Text>
                         <TouchableOpacity onPress={() => console.log(`Remove item with id ${item.id}`)} style={fridgeStyles.buttonContainer}>
                             <Text style = {fridgeStyles.button}> Remove </Text>
