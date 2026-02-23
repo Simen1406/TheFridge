@@ -11,7 +11,7 @@ class Fridge(SQLModel):
 class FridgeItem(Fridge, table=True):
     id: int = Field(nullable=False, primary_key=True)
 
-class AddItem(Fridge):
+class AddFridgeItem(Fridge):
     pass
 
 class Groceries(SQLModel):
@@ -23,5 +23,5 @@ class Groceries(SQLModel):
 class GroceryItem(Groceries, table=True):
     id: int = Field(nullable=False, primary_key=True)
 
-class addGroceryItem(Groceries):
+class AddGroceryItem(Groceries):
     pass
