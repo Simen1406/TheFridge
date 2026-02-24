@@ -1,12 +1,40 @@
 import { Text, View, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
+
 import FridgeTable from "@/components/fridgeTable";
-import { mockFridgeItems } from "@/data/fridgeItems";
+import AddItemForm from "@/components/fridgeItemForm";
+import  { FridgeItem, GroceryItem } from "@/types/foodTypes";
+import { api } from "@/services/api";
 import { colors } from "@/themes/colors";
 
+
 export default function FridgeInventory() {
+  const [items, setItems] = useState<FridgeItem[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const data = await api.getFridgeItems();
+        setItems(data);
+      } catch (error) {
+        console.error("Error fetching fridge items:", error);
+      }
+    };
+
+    fetchItems();
+  }, []);
+
+  const handleItemAdded = () => {
+    setShowAddForm(false);
+    // Refresh the items list
+    api.getFridgeItems().then((data) => setItems(data));
+  };
+
   return (
     <View style={styles.container}>
-      <FridgeTable items={mockFridgeItems} />
+      <FridgeTable items={items} onAddPress={() => setShowAddForm(true)} />
+      <AddItemForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
     </View>
   );
 }

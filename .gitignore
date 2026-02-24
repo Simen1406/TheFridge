@@ -54,5 +54,8 @@ yarn-error.*
 /ios
 /android
 
+#DB
+# SQLite database
+*.db
+*.sqlite3
 
-.db*
