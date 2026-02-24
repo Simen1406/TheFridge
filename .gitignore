@@ -54,3 +54,5 @@ yarn-error.*
 /ios
 /android
 
+
+.db*
