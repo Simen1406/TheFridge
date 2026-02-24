@@ -8,7 +8,8 @@ KASSALAPP_API_KEY = os.getenv("KASSALAPP_API_KEY")
 
 BASE_URL = os.getenv("KASSALAPP_API_URL")
 
-def get_product_info(search:str, filter:str = None):
+
+def search_for_product(search:str, filter:str = None):
     headers = {
         "Authorization": f"Bearer {KASSALAPP_API_KEY}"
     }
@@ -20,13 +21,57 @@ def get_product_info(search:str, filter:str = None):
     response = requests.get(url, headers=headers)
     response = response.json()
 
-    print(type(response))
+    """print(type(response))
     print(response.keys())
     print(len(response["data"]))
-    print(response["data"][0].keys())
+    print(response["data"][0].keys())"""
 
-    first_product = response["data"][0]
-    print("First product:", first_product)
-    return response
+    #first_product = response["data"][0]
+    #print("First product:", first_product)
+    #print(len(first_product))
+    return response["data"]
 
-get_product_info("potet")
+
+def clean_product_data(products):
+    cleaned_products = []
+    for product in products:
+        print("product keys: ", product.keys())
+
+        ean = product["ean"]
+        price = product["current_price"]
+
+        if ean is None or price is None:
+            print(f"Skipping product with missing EAN or price: {product.get('name', 'Unknown')}")
+            continue
+
+        cleaned = {
+            "id": product.get("id", ""),
+            "ean": product.get("ean", ""),
+            "name": product.get("name", ""),
+            "brand": product.get("brand", ""),
+        "vendor": product.get("vendor", ""),
+        "price": product.get("current_price", 0),
+        "weight": product.get("weight", ""),
+        "weight_unit": product.get("weight_unit", ""),
+        "image": product.get("image", "")
+        }
+        
+        cleaned_products.append(cleaned)
+    return cleaned_products
+
+def remove_duplicates(cleaned_products):
+    seen_eans = set()
+    unique_products = []
+    for p in cleaned_products:
+        if p["ean"] not in seen_eans:
+            unique_products.append(p)
+            seen_eans.add(p["ean"])
+    
+    return unique_products
+
+if __name__ == "main":
+    products = search_for_product("lettmelk")               #returns products matching searchterm
+    cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
+    unique_products = remove_duplicates(cleaned_products)  #Removes duplicate products based on EAN
+
+
