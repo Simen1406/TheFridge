@@ -10,8 +10,8 @@ class Fridge(SQLModel):
     brand: str
     price: float
     weight: float
-    unit_weight: str
-    img: str
+    weight_unit: str
+    image: str
     expiration_date: Optional[date] = Field(default=None, index=True)
 
 
@@ -26,10 +26,10 @@ class Groceries(SQLModel):
     ean: str
     name: str
     brand: str
-    price: float
+    price: float 
     weight: float
-    unit_weight: str
-    img: str
+    weight_unit: str
+    image: str
     expiration_date: Optional[date] = Field(default=None, index=True)
 
 class GroceryItem(Groceries, table=True):

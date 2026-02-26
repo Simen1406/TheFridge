@@ -77,5 +77,5 @@ def search_and_clean_products(search:str, filter:str = None):
 
 if __name__ == "__main__":
     products = search_and_clean_products("laktosefri lettmelk 1l")
-    print(f"Found {len(products)} unique products")
-    print(f" product image value: {products[0]['image']}")
+    #print(f"Found {len(products)} unique products")
+    #print(f" product image value: {products[0]['image']}")
