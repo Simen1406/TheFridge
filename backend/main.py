@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from mockData.fridgeItems import insert_mock_data
 from db.db import init_db, get_session
 from models.models import FridgeItem, AddFridgeItem
+from services.kassalappAPI.kassalapp import search_and_clean_products
 
 
 #app entrypoint
@@ -37,10 +38,14 @@ def get_fridge_items(session: Session = Depends(get_session)):
     print(type(results))
     return results
 
-@app.post("/AddFridgeItem")
+@app.post("/ManualAddFridgeItem")
 def add_fridge_item(item: AddFridgeItem, session: Session = Depends(get_session)):
     new_item = FridgeItem.model_validate(item)
     session.add(new_item)
     session.commit()
     session.refresh(new_item)
     return new_item
+
+@app.get("/item_search")
+def search_items(search: str, filter: str = None):
+    return search_and_clean_products(search, filter)
