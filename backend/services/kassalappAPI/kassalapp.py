@@ -35,7 +35,6 @@ def search_for_product(search:str, filter:str = None):
 def clean_product_data(products):
     cleaned_products = []
     for product in products:
-        print("product keys: ", product.keys())
 
         ean = product["ean"]
         price = product["current_price"]
@@ -49,13 +48,13 @@ def clean_product_data(products):
             "ean": product.get("ean", ""),
             "name": product.get("name", ""),
             "brand": product.get("brand", ""),
-        "vendor": product.get("vendor", ""),
-        "price": product.get("current_price", 0),
-        "weight": product.get("weight", ""),
-        "weight_unit": product.get("weight_unit", ""),
-        "image": product.get("image", "")
-        }
+            "price": product.get("current_price", 0),
+            "weight": product.get("weight", ""),
+            "weight_unit": product.get("weight_unit", ""),
+            "image": product.get("image", "")
+            }
         
+        #print(f"Cleaned product: {cleaned} \n")
         cleaned_products.append(cleaned)
     return cleaned_products
 
@@ -69,8 +68,8 @@ def remove_duplicates(cleaned_products):
     
     return unique_products
 
-if __name__ == "main":
-    products = search_for_product("lettmelk")               #returns products matching searchterm
+if __name__ == "__main__":
+    products = search_for_product("laktosefri lettmelk 1l")               #returns products matching searchterm
     cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
     unique_products = remove_duplicates(cleaned_products)  #Removes duplicate products based on EAN
 
