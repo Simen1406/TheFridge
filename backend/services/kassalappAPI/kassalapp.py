@@ -68,9 +68,14 @@ def remove_duplicates(cleaned_products):
     
     return unique_products
 
-if __name__ == "__main__":
-    products = search_for_product("laktosefri lettmelk 1l")               #returns products matching searchterm
+def search_and_clean_products(search:str, filter:str = None):
+    products = search_for_product(search, filter)               #returns products matching searchterm
     cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
     unique_products = remove_duplicates(cleaned_products)  #Removes duplicate products based on EAN
+    return unique_products
 
 
+if __name__ == "__main__":
+    products = search_and_clean_products("laktosefri lettmelk 1l")
+    print(f"Found {len(products)} unique products")
+    print(f" product image value: {products[0]['image']}")
