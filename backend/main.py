@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Depends
+from re import search
+
+from fastapi import FastAPI, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
@@ -47,5 +49,8 @@ def add_fridge_item(item: AddFridgeItem, session: Session = Depends(get_session)
     return new_item
 
 @app.get("/item_search")
-def search_items(search: str, filter: str = None):
-    return search_and_clean_products(search, filter)
+def product_search(
+    search: str = Query(..., min_length=1, description = "eg. laktosefri lettmelk 1l"),
+    filter: str = Query(None, description="optional filter for sorting results, eg. price_asc, price_desc"),
+):
+    return search_and_clean_products(search=search, filter=filter)
