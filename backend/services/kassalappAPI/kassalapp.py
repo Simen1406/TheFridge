@@ -68,11 +68,26 @@ def remove_duplicates(cleaned_products):
     
     return unique_products
 
+def filter_products_name(products, search_term):
+    filtered = []
+    search_term_lower = search_term.lower()
+    for product in products:
+        if product["name"].lower().startswith(search_term_lower):
+            filtered.append(product)
+    return filtered
+
 def search_and_clean_products(search:str, filter:str = None):
     products = search_for_product(search, filter)               #returns products matching searchterm
     cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
-    unique_products = remove_duplicates(cleaned_products)  #Removes duplicate products based on EAN
-    return unique_products
+    unique_products = remove_duplicates(cleaned_products)
+    filtered_products = filter_products_name(unique_products, search)  #Filters products by name
+    return filtered_products
+
+"""def search_and_clean_products(search:str, filter:str = None):
+    products = search_for_product(search, filter)               #returns products matching searchterm
+    cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
+    unique_products = remove_duplicates(cleaned_products)  #Filters products by name
+    return unique_products"""
 
 
 if __name__ == "__main__":
