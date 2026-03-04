@@ -68,7 +68,7 @@ def remove_duplicates(cleaned_products):
     
     return unique_products
 
-def filter_products_name(products, search_term):
+def filter_products_name(products, search_term):       #search filtering needs more work!!
     filtered = []
     search_term_lower = search_term.lower()
     for product in products:
@@ -76,21 +76,31 @@ def filter_products_name(products, search_term):
             filtered.append(product)
     return filtered
 
+def retrieve_image_urls(products):
+    product_image_urls = []
+    for p in products:
+        name = p["name"]
+        image_url = p["image"]
+        product_image_urls.append((name, image_url))
+
+    return product_image_urls
+
 def search_and_clean_products(search:str, filter:str = None):
-    products = search_for_product(search, filter)               #returns products matching searchterm
-    cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
-    unique_products = remove_duplicates(cleaned_products)
-    filtered_products = filter_products_name(unique_products, search)  #Filters products by name
+    products = search_for_product(search, filter)                       #returns products matching searchterm
+    cleaned_products = clean_product_data(products)                     #removes columns not needed
+    unique_products = remove_duplicates(cleaned_products)               #Removes products with missing EAN or price, and keeps only relevant fields
+    filtered_products = filter_products_name(unique_products, search)   #Stricter filter on product name, to remove products that only partially match search term
     return filtered_products
 
-"""def search_and_clean_products(search:str, filter:str = None):
-    products = search_for_product(search, filter)               #returns products matching searchterm
-    cleaned_products = clean_product_data(products)         #Removes products with missing EAN or price, and keeps only relevant fields
-    unique_products = remove_duplicates(cleaned_products)  #Filters products by name
-    return unique_products"""
+def get_product_images(search:str, filter:str = None):
+    products = search_and_clean_products(search, filter)
+    product_image_urls = retrieve_image_urls(products)
+    return product_image_urls
+    
 
 
 if __name__ == "__main__":
-    products = search_and_clean_products("laktosefri lettmelk 1l")
-    #print(f"Found {len(products)} unique products")
-    #print(f" product image value: {products[0]['image']}")
+    filtered_products = search_and_clean_products()
+    url_list = retrieve_image_urls(filtered_products)
+    #print(f"Found {len(url_list)} unique products")
+    #print(f" product image value: {url_list[0][1]}")
