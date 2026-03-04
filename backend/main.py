@@ -1,19 +1,16 @@
 from re import search
 
 from fastapi import FastAPI, Depends, Query
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
-from api_endpoints.db_endpoints import router as kassalapp_router
-
-from mockData.fridgeItems import insert_mock_data
-from db.db import init_db, get_session
-from models.models import FridgeItem, AddFridgeItem
-from services.kassalappAPI.kassalapp import search_and_clean_products
-
+from api_endpoints.db_endpoints import router as db_router
+from api_endpoints.kassalapp_endpoints import router as kassalapp_router
 
 #app entrypoint
 app = FastAPI()
+app.include_router(db_router)
 app.include_router(kassalapp_router)
 
 app.add_middleware(
@@ -33,9 +30,3 @@ async def pong():
     return {"ping": "pong!"}
 
 
-@app.get("/item_search")
-def product_search(
-    search: str = Query(..., min_length=1, description = "eg. laktosefri lettmelk 1l"),
-    filter: str = Query(None, description="optional filter for sorting results, eg. price_asc, price_desc"),
-):
-    return search_and_clean_products(search=search, filter=filter)
