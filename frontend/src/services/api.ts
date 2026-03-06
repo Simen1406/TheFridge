@@ -12,13 +12,13 @@ export type NewFridgeItem = {
 
 export const api = {
     getFridgeItems: async () => {
-        const response = await fetch(`${API_BASE_URL}/fridge-items`);
+        const response = await fetch(`${API_BASE_URL}/fridge-items_from_db`);
         return response.json();
     },
 };
 
 export const addFridgeItem = async (item: NewFridgeItem) => {
-    const response = await fetch(`${API_BASE_URL}/AddFridgeItem`, {
+    const response = await fetch(`${API_BASE_URL}//ManualAddFridgeItem`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
