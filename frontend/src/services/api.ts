@@ -3,11 +3,14 @@
 const API_BASE_URL = "http://localhost:8000";
 
 export type NewFridgeItem = {
+    ean: string;
     name: string;
-    category: string;
-    quantity: string;    // turn into number before sending to backend
-    unit: string;
-    expiration_date: string;    
+    brand: string;
+    price: string;
+    weight: string;
+    weight_unit: string;
+    image: string;
+    expiration_date: string | null;    
 };
 
 export const api = {
@@ -18,15 +21,12 @@ export const api = {
 };
 
 export const addFridgeItem = async (item: NewFridgeItem) => {
-    const response = await fetch(`${API_BASE_URL}//ManualAddFridgeItem`, {
+    const response = await fetch(`${API_BASE_URL}/ManualAddFridgeItem`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-            ...item,
-            quantity: parseInt(item.quantity) // Convert quantity to number before sending
-        }),
+        body: JSON.stringify(item),
     });
     return response.json();
 };

@@ -5,32 +5,44 @@ import { colors } from "@/themes/colors";
 import FormButtons from "./formButtons";
 
 export default function AddItemForm({ visible, onClose, onItemAdded }: {visible: boolean; onClose: () => void; onItemAdded: () => void }) {
+    const [ean, setEan] = useState("");
     const [name, setName] = useState("");
-    const [category, setCategory] = useState("");
-    const [quantity, setQuantity] = useState("");       // turn into number before sending to backend
-    const [unit, setUnit] = useState("");
+    const [brand, setBrand] = useState("");
+    const [price, setPrice] = useState("");
+    const [weight, setWeight] = useState("");
+    const [weightUnit, setWeightUnit] = useState("");
+    const [image, setImage] = useState("");
     const [expirationDate, setExpirationDate] = useState("");
 
     const resetForm = () => {
         setName("");
-        setCategory("");
-        setQuantity("");
-        setUnit("");
+        setEan("");
+        setBrand("");
+        setPrice("");
+        setWeight("");
+        setWeightUnit("");
+        setImage("");
         setExpirationDate("");
     }
 
     const handleSubmit = async () => {
         await addFridgeItem({
+            ean,
             name,
-            category,
-            quantity,
-            unit,
-            expiration_date: expirationDate,
+            brand,
+            price,
+            weight,
+            weight_unit: weightUnit,
+            image,
+            expiration_date: expirationDate.trim() ? expirationDate : null,
         });
         setName("");
-        setCategory("");
-        setQuantity("");
-        setUnit("");
+        setEan("");
+        setBrand("");
+        setPrice("");
+        setWeight("");
+        setWeightUnit("");
+        setImage("");
         setExpirationDate("");
         onItemAdded(); // Refresh the list after adding
         onClose(); // Close the form after adding
@@ -50,14 +62,14 @@ export default function AddItemForm({ visible, onClose, onItemAdded }: {visible:
                 <Text style={formStyles.label}>Name</Text>
                 <TextInput style={formStyles.input} placeholder="Name" value={name} onChangeText={setName} />
 
-                <Text style={formStyles.label}>Category</Text>
-                <TextInput style={formStyles.input} placeholder="Category" value={category} onChangeText={setCategory} />
+                <Text style={formStyles.label}>Price</Text>
+                <TextInput style={formStyles.input} placeholder="Price" keyboardType="numeric" value={price} onChangeText={setPrice} />
 
-                <Text style={formStyles.label}>Quantity</Text>
-                <TextInput style={formStyles.input} placeholder="Quantity" value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
+                <Text style={formStyles.label}>weight</Text>
+                <TextInput style={formStyles.input} placeholder="Weight" keyboardType="numeric" value={weight} onChangeText={setWeight} />
 
-                <Text style={formStyles.label}>Unit</Text>
-                <TextInput style={formStyles.input} placeholder="Unit" value={unit} onChangeText={setUnit} />
+                <Text style={formStyles.label}>Weight unit</Text>
+                <TextInput style={formStyles.input} placeholder="Unit" value={weightUnit} onChangeText={setWeightUnit} />
 
                 <Text style={formStyles.label}>Expiration Date</Text>
                 <TextInput style={formStyles.input} placeholder="Expiration (YYYY-MM-DD)" value={expirationDate} onChangeText={setExpirationDate} />

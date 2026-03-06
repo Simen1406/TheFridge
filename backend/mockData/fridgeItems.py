@@ -6,9 +6,36 @@ from models.models import FridgeItem
 #create some mock data for testing api and frontend
 
 mock_fridge_items = [
-    FridgeItem(name = "milk", category = "dairy", quantity=1, unit="liter", expiration_date=date(2024, 7, 1)),
-    FridgeItem(name = "eggs", category = "dairy", quantity=12, unit="pieces", expiration_date=date(2024, 7, 10)),
-    FridgeItem(name = "cheese", category = "dairy", quantity=200, unit="grams", expiration_date=date(2024, 7, 15)),
+    FridgeItem(
+        ean="7038010001001",
+        name="milk",
+        brand="TINE",
+        price=24.9,
+        weight=1.0,
+        weight_unit="l",
+        image="https://example.com/images/milk.jpg",
+        expiration_date=date(2026, 3, 15),
+    ),
+    FridgeItem(
+        ean="7038010002008",
+        name="eggs",
+        brand="Prior",
+        price=49.9,
+        weight=12.0,
+        weight_unit="pcs",
+        image="https://example.com/images/eggs.jpg",
+        expiration_date=date(2026, 3, 20),
+    ),
+    FridgeItem(
+        ean="7038010003005",
+        name="cheese",
+        brand="Norvegia",
+        price=69.9,
+        weight=500.0,
+        weight_unit="g",
+        image="https://example.com/images/cheese.jpg",
+        expiration_date=date(2026, 3, 25),
+    ),
 ]
 
 def insert_mock_data(table_name: str):

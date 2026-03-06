@@ -1,17 +1,23 @@
 export type FridgeItem = {
     id: number;
+    ean: string;
     name: string;
-    category: string;
-    quantity: number;
-    unit: string;
-    expiration_date: string;
+    brand: string;
+    price: number;
+    weight: number;
+    weight_unit: string;
+    image: string;
+    expiration_date: string | null;
 };
 
 export type GroceryItem = {
-    id: number,
-    name: string,
-    category: string,
-    quantity: number,
-    unit: string,
-    expiration_date: string,
+    id: number;
+    ean: string;
+    name: string;
+    brand: string;
+    price: number;
+    weight: number;
+    weight_unit: string;
+    image: string;
+    expiration_date: string | null;
 };
