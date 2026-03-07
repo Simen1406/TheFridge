@@ -5,10 +5,22 @@ import { mockGroceryItems } from "@/data/groceryList";
 import GroceryTable from "@/components/groceryTable";
 
 export default function GroceryList() {
+  const handleAddPress = () => {
+    // Placeholder until grocery add flow is implemented.
+  };
+
+  const handleRemovePress = (_itemId: number) => {
+    // Placeholder until grocery remove flow is implemented.
+  };
+
   return (
     // grocery list screen - shows items to buy.
     <View style={styles.container}>
-      <GroceryTable items= {mockGroceryItems} />
+      <GroceryTable
+        items={mockGroceryItems}
+        onAddPress={handleAddPress}
+        onRemovePress={handleRemovePress}
+      />
     </View>
   );
 }

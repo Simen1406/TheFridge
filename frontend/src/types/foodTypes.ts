@@ -19,5 +19,4 @@ export type GroceryItem = {
     weight: number;
     weight_unit: string;
     image: string;
-    expiration_date: string | null;
 };
