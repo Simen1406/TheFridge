@@ -1,39 +1,40 @@
-# Prosjektstatus – TheFridge
+﻿# Prosjektstatus - TheFridge
 
 ## Hva som er gjort
 
-- **Backend med FastAPI er satt opp** med hovedapp, CORS-konfigurasjon og enkle helse-endepunkter (`/` og `/ping`).
-- **Databaseintegrasjon via SQLModel er på plass**, inkludert oppretting av tabeller ved startup og sesjonshåndtering.
-- **Datamodeller for kjøleskaps- og handlelistevarer finnes**, med felter for blant annet navn, kategori, mengde, enhet og utløpsdato.
-- **Mock-data for kjøleskapet settes inn ved oppstart** dersom tabellen er tom.
-- **API-endepunkter finnes for kjøleskapsdata** (hent fra DB og manuell innlegging) samt produkt-/bildesøk mot ekstern Kassalapp-tjeneste.
-- **Frontend med Expo/React Native er satt opp** med faner for hjem, kjøleskap og handleliste.
-- **Kjøleskapssiden henter data fra API** ved lasting og viser data i tabellkomponent.
-- **Skjema for å legge til vare i kjøleskap er laget**, med modal, inputfelter og kall til API ved lagring.
+- Backend med FastAPI er satt opp med hovedapp, CORS og helse-endepunkter (`/` og `/ping`).
+- Databaseintegrasjon via SQLModel er pa plass, inkludert init ved startup og sesjonshandtering.
+- Datamodeller for fridge/grocery finnes i backend.
+- Mock-data for fridge settes inn ved oppstart dersom tabellen er tom.
+- API for fridge er koblet opp i frontend:
+  - Hente varer: `GET /fridge-items_from_db`
+  - Legge til vare: `POST /ManualAddFridgeItem`
+  - Slette vare: `POST /deleteFridgeItem`
+- Frontend med Expo/React Native er satt opp med faner for Home, Fridge og Groceries.
+- Fridge-siden henter data fra API og viser varene i tabell.
 
-## Hva som bør gjøres videre
+## Hva som bor gjores videre
 
-1. **Rette opp API-ruter mellom frontend og backend**
-   - Frontend kaller i dag `/fridge-items` og `/AddFridgeItem`, mens backend eksponerer `/fridge-items_from_db` og `/ManualAddFridgeItem`.
-   - Enten backend-rutene eller frontend-kallene må standardiseres for at funksjonaliteten skal virke.
+1. **Lag grocery-endepunkter for add/remove**
+   - Opprett backend-endepunkter som handterer innlegging og sletting av varer i grocery-listen.
+   - Speil flyten som allerede finnes for fridge der det passer.
 
-2. **Synkronisere datamodeller mellom frontend og backend**
-   - Frontend forventer felter som `category`, `quantity` og `unit`.
-   - Backend-modellen inkluderer også felter som `ean`, `brand`, `price`, `weight`, `weight_unit`, `image`, som gjør at innlegging fra frontend trolig feiler uten mapping eller modellendring.
+2. **Lag Python-skript som vasker data inn mot grocery-modellen**
+   - Normaliser felt/typer slik at data matcher `GroceryItem`-modellen.
+   - Kjor vasken for mock-data og evt. data fra eksterne kilder for innsetting i DB.
 
-3. **Legge til validering og feilhåndtering**
-   - Både i frontend (brukervennlige feilmeldinger) og backend (tydelige HTTP-feil med forklarende meldinger).
+3. **Koble grocery til frontend**
+   - Erstatt mock-data i Groceries-skjermen med kall til backend.
+   - Koble `Add`/`Remove` handling til de nye grocery-endepunktene.
 
-4. **Implementere sletting/oppdatering av varer**
-   - UI har en "Remove"-knapp, men den gjør foreløpig bare `console.log`.
-   - Krever tilsvarende backend-endepunkt(er).
+4. **Legg til validering og feilhandtering**
+   - Bedre feilmeldinger i frontend.
+   - Tydelige HTTP-feil i backend ved ugyldig input og DB-feil.
 
-5. **Bygge ut handleliste-flyten**
-   - Handlelistevisningen bruker nå mock-data.
-   - Koble denne til backend og lagre/fetch data fra database.
+5. **Legg til tester og enkel CI**
+   - API-tester for fridge/grocery endepunkter.
+   - Enkle frontend-tester for sentrale flows.
 
-6. **Legge til tester og enkel CI**
-   - Mangler synlige automatiserte tester for API-ruter, datamodeller og sentrale frontend-flyter.
-
-7. **Dokumentasjon og oppstartsguide**
-   - Legge inn README med tydelige steg for lokal kjøring (backend + frontend), miljøvariabler (`DATABASE_URL`) og vanlige feilscenarioer.
+6. **Dokumentasjon og oppstartsguide**
+   - Oppdater README med lokale steg for backend + frontend.
+   - Dokumenter miljo-variabler (f.eks. `DATABASE_URL`) og vanlige feilscenarioer.
