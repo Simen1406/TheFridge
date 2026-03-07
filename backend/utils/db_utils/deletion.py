@@ -3,7 +3,7 @@ import os
 from sqlmodel import Session, select
 from models.models import FridgeItem
 from db.db import engine
-from utils.db_utils.deletion import delete_all_items, insert_mock_data
+from mockData.fridgeItems import insert_mock_data
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 

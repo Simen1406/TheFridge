@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 from db.db import get_session, init_db
 from mockData.fridgeItems import insert_mock_data
 from models.models import AddFridgeItem, FridgeItem
+from utils.db_utils.deletion import delete_item_by_id
 
 router = APIRouter()
 
@@ -26,3 +27,11 @@ def add_fridge_item(item: AddFridgeItem, session: Session = Depends(get_session)
     session.commit()
     session.refresh(new_item)
     return new_item
+
+@router.post("/deleteFridgeItem")
+def delete_fridge_item(item_id:int, session: Session = Depends(get_session)):
+    success = delete_item_by_id(item_id)
+    if success:
+        return {"message": f"Item with id {item_id} deleted successfully."}
+    else:
+        return {"message": f"Item with id {item_id} not found."}

@@ -18,6 +18,12 @@ export const api = {
         const response = await fetch(`${API_BASE_URL}/fridge-items_from_db`);
         return response.json();
     },
+    deleteFridgeItem: async (itemId: number) => {
+        const response = await fetch(`${API_BASE_URL}/deleteFridgeItem?item_id=${itemId}`, {
+            method: "POST",
+        });
+        return response.json();
+    },
 };
 
 export const addFridgeItem = async (item: NewFridgeItem) => {
