@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import FridgeTable from "@/components/fridgeTable";
 import AddItemForm from "@/components/fridgeItemForm";
-import  { FridgeItem, GroceryItem } from "@/types/foodTypes";
+import  { FridgeItem } from "@/types/foodTypes";
 import { api } from "@/services/api";
 import { colors } from "@/themes/colors";
 
@@ -31,9 +31,19 @@ export default function FridgeInventory() {
     api.getFridgeItems().then((data) => setItems(data));
   };
 
+  const handleItemRemoved = async (itemId: number) => {
+    try {
+      await api.deleteFridgeItem(itemId);
+      const data = await api.getFridgeItems();
+      setItems(data);
+    } catch (error) {
+      console.error(`Error deleting fridge item with id ${itemId}:`, error);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <FridgeTable items={items} onAddPress={() => setShowAddForm(true)} />
+      <FridgeTable items={items} onAddPress={() => setShowAddForm(true)} onRemovePress={handleItemRemoved} />
       <AddItemForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
     </View>
   );

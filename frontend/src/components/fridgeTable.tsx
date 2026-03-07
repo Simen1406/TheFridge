@@ -2,9 +2,10 @@
 import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
 import { colors } from "@/themes/colors";
+import { FridgeItem } from "@/types/foodTypes";
 
 
-export default function FridgeTable({ items, onAddPress }: {items: { id: number; name: string; quantity: number; unit: string; category: string; expiration_date: string }[], onAddPress: () => void }) {
+export default function FridgeTable({ items, onAddPress, onRemovePress }: {items: FridgeItem[], onAddPress: () => void, onRemovePress: (itemId: number) => void }) {
     return (
         <View style={fridgeStyles.background}>
             
@@ -18,12 +19,20 @@ export default function FridgeTable({ items, onAddPress }: {items: { id: number;
                 </View>
                 {items.map((item) => (
                     <View key={item.id} style={fridgeStyles.row}>
-                        <Text style={fridgeStyles.itemText}>{item.name}</Text>
-                        <Text style={fridgeStyles.itemText}>{item.quantity} {item.unit}</Text>
-                        <Text style={fridgeStyles.itemText}>{item.expiration_date}</Text>
-                        <TouchableOpacity onPress={() => console.log(`Remove item with id ${item.id}`)} style={fridgeStyles.buttonContainer}>
-                            <Text style = {fridgeStyles.button}> Remove </Text>
-                        </TouchableOpacity>
+                        <View style={fridgeStyles.nameCol}>
+                            <Text style={fridgeStyles.itemText}>{item.name}</Text>
+                        </View>
+                        <View style={fridgeStyles.amountCol}>
+                            <Text style={fridgeStyles.itemText}>{item.weight} {item.weight_unit}</Text>
+                        </View>
+                        <View style={fridgeStyles.dateCol}>
+                            <Text style={fridgeStyles.itemText}>{item.expiration_date}</Text>
+                        </View>
+                        <View style={fridgeStyles.actionCol}>
+                            <TouchableOpacity onPress={() => onRemovePress(item.id)} style={fridgeStyles.buttonContainer}>
+                                <Text style = {fridgeStyles.button}> Remove </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 ))}
             </View>
@@ -50,7 +59,8 @@ const fridgeStyles = StyleSheet.create({
         paddingBottom: 20,
     },
     container: {
-        width: "50%",
+        width: "80%",
+        maxWidth: 1000,
         height: "70%",
         alignSelf: "center",
         backgroundColor: colors.background,
@@ -64,10 +74,28 @@ const fridgeStyles = StyleSheet.create({
     },
     row: {
         flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 12,
+        justifyContent: "flex-start",
+        alignItems: "center",
+        paddingVertical: 15,
+        columnGap: 18,
         borderBottomWidth: 1,
         borderBottomColor: colors.darkGray,
+    },
+    nameCol: {
+        flex: 1.2,
+        minWidth: 110,
+    },
+    amountCol: {
+        flex: 1,
+        minWidth: 130,
+    },
+    dateCol: {
+        flex: 1.1,
+        minWidth: 150,
+    },
+    actionCol: {
+        width: 90,
+        alignItems: "flex-start",
     },
     itemText: {
         fontSize: fontSizes.body,
