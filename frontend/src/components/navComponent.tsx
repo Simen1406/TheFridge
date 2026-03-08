@@ -19,7 +19,10 @@ export default function SharedNav() {
                 </Link>
                 <Link href="/(tabs)/Groceries" style={styles.navLink}>
                     <Text style={styles.linkText}>Grocery List</Text>
-                </Link>    
+                </Link>
+                <Link href="/(tabs)/CommonFridgeItems" style={styles.navLink}>
+                    <Text style={styles.linkText}>Common Items</Text>
+                </Link>
             </View>
         </View>
     );
