@@ -1,11 +1,13 @@
+from datetime import datetime
 from pathlib import Path
-from playwright.sync_api import Page, TimeoutError, sync_playwright
+from playwright.sync_api import Locator, Page, TimeoutError, sync_playwright
 
 RECEIPTS_URL = "https://www.trumf.no/profil/kvitteringer"
 DOWNLOAD_DIR = Path(__file__).resolve().parent / "downloads"
+SESSION_FILE = Path(__file__).resolve().parent / "trumf_session.json"
 
 
-def enter_site_login_and_go_to_receipts(page: Page) -> None:
+def login_to_site(page: Page) -> None:
     page.goto("https://www.trumf.no", wait_until="domcontentloaded")
     print("Login manually in the browser, including SMS code if required.")
     input(f"Press Enter ONLY when you see the receipts page ({RECEIPTS_URL})... ")
@@ -26,120 +28,101 @@ def enter_site_login_and_go_to_receipts(page: Page) -> None:
     page.wait_for_timeout(1500)
     print(f"Receipts page opened: {page.url}")
 
+def ensure_logged_in(page: Page, context) -> None:
+    page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+    page.wait_for_timeout(1000)
 
-def find_downloads(page: Page):
-    # Expand all receipt submenus/accordions before collecting download actions.
-    expand_selectors = [
-        "button[aria-expanded='false']",
-        "[role='button'][aria-expanded='false']",
-        "details:not([open]) > summary",
-    ]
+    # If session is valid, Trumf keeps us on the receipts page.
+    if "/profil/kvitteringer" in page.url:
+        print("Session loaded from disk.")
+        return
 
-    for selector in expand_selectors:
-        locator = page.locator(selector)
-        count = locator.count()
-        for i in range(count):
-            item = locator.nth(i)
-            try:
-                if item.is_visible():
-                    item.click(timeout=1000)
-                    page.wait_for_timeout(100)
-            except Exception:
-                # Ignore non-clickable controls and continue.
-                continue
+    print("No valid saved session. Manual login required.")
+    login_to_site(page)
+    context.storage_state(path=str(SESSION_FILE))
+    print(f"Saved new session to {SESSION_FILE}")
 
-    # Each receipt row has a menu trigger icon (#receipt-stroke) that must be
-    # clicked before download actions become visible.
-    receipt_menu_triggers = page.locator(
-        ",".join(
-            [
-                "button:has(svg use[href='#receipt-stroke'])",
-                "button:has(svg use[xlink\\:href='#receipt-stroke'])",
-                "a:has(svg use[href='#receipt-stroke'])",
-                "[role='button']:has(svg use[href='#receipt-stroke'])",
-            ]
-        )
+
+def expand_rows(page: Page):
+    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
+    expand_buttons = page.locator("button.ws-transaction-history-table__toggle-button")
+    count = expand_buttons.count()
+
+    expanded = 0
+    for i in range(count):
+        button = expand_buttons.nth(i)
+        if button.is_visible():
+            button.click()
+            expanded += 1
+            page.wait_for_timeout(300)
+
+    print(f"Expanded {expanded} rows.")
+        
+            
+def find_receipt_rows(page: Page):
+    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
+    rows = page.locator(
+        "tr.ws-transaction-history-table__row:has(span.ws-transaction-history-table__description-date)"
     )
+    rows = list(rows.all())
+    count = len(rows)
+    print(f"Found {count} dated rows in the transaction history table.")
+    return rows
 
-    print(f"Found {receipt_menu_triggers.count()} receipt menu trigger(s).")
-    return receipt_menu_triggers
+def find_receipt_dates(rows: list[Locator], latest_date_to_retrieve: str):
+    cutoff_date = datetime.strptime(latest_date_to_retrieve, "%d.%m.%Y")
+    rows_to_process = []
 
+    for i, row in enumerate(rows):
+        date_locator = row.locator("span.ws-transaction-history-table__description-date")
+        if date_locator.count() == 0:
+            print(f"[{i}] Skip row without date.")
+            continue
 
-def download_receipts(page: Page, receipt_menu_triggers) -> int:
-    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    downloaded = 0
+        date_text = date_locator.first.inner_text(timeout=2000).strip()
+        row_date = datetime.strptime(date_text, "%d.%m.%Y")
 
-    total = receipt_menu_triggers.count()
-    for i in range(total):
-        trigger = receipt_menu_triggers.nth(i)
-        try:
-            if not trigger.is_visible():
-                continue
+        if row_date >= cutoff_date:
+            rows_to_process.append(row)
+            print(f"[{i}] Keep row with date {date_text}")
+        else:
+            print(f"[{i}] Stop at date {date_text} (< {latest_date_to_retrieve})")
+            break
 
-            trigger.scroll_into_view_if_needed()
-            trigger.click(timeout=3000)
-            page.wait_for_timeout(200)
+    print(f"Rows to process: {len(rows_to_process)}")
+    return rows_to_process
 
-            action = page.locator(
-                ",".join(
-                    [
-                        "a[download]",
-                        "a[href*='.pdf']",
-                        "a[href*='jpeg']",
-                        "a[href*='jpg']",
-                        "a[href*='png']",
-                        "a:has-text('Last ned')",
-                        "button:has-text('Last ned')",
-                        "button:has-text('Download')",
-                        "[role='menuitem']:has-text('Last ned')",
-                    ]
-                )
-            ).first
-
-            if action.count() == 0 or not action.is_visible():
-                page.keyboard.press("Escape")
-                print(f"Skipped receipt #{i + 1}: no visible download action.")
-                continue
-
-            with page.expect_download(timeout=5000) as download_info:
-                action.click()
-
-            download = download_info.value
-            filename = download.suggested_filename or f"receipt_{i + 1}.pdf"
-            target = DOWNLOAD_DIR / filename
-            if target.exists():
-                stem = target.stem
-                suffix = target.suffix
-                n = 1
-                while (DOWNLOAD_DIR / f"{stem}_{n}{suffix}").exists():
-                    n += 1
-                target = DOWNLOAD_DIR / f"{stem}_{n}{suffix}"
-
-            download.save_as(str(target))
-            downloaded += 1
-            print(f"Downloaded: {target.name}")
-            page.keyboard.press("Escape")
-        except TimeoutError:
-            print(f"Skipped receipt #{i + 1}: no browser download event.")
-            page.keyboard.press("Escape")
-        except Exception as exc:
-            print(f"Failed receipt #{i + 1}: {exc}")
-            page.keyboard.press("Escape")
-
-    return downloaded
+def download_receipt(page: Page):
+    pass
 
 
-def run_download_flow() -> None:
+
+def run_download_flow():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
-        context = browser.new_context(accept_downloads=True)
+        context_args = {"accept_downloads": True}
+        if SESSION_FILE.exists():
+            context_args["storage_state"] = str(SESSION_FILE)
+
+        context = browser.new_context(**context_args)
         page = context.new_page()
+        page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
 
-        enter_site_login_and_go_to_receipts(page)
-        download_locator = find_downloads(page)
-        downloaded = download_receipts(page, download_locator)
+        if SESSION_FILE.exists():
+            ensure_logged_in(page, context)
+        else:
+            print("No saved session file found. Manual login required.")
+            login_to_site(page)
+            context.storage_state(path=str(SESSION_FILE))
+            print(f"Saved new session to {SESSION_FILE}")
 
-        print(f"Done. Downloaded {downloaded} receipt(s) to: {DOWNLOAD_DIR}")
+        expand_rows(page)
+        rows = find_receipt_rows(page)
+        rows_to_process = find_receipt_dates(rows, latest_date_to_retrieve="17.02.2026")
+        print(f"Ready to download {len(rows_to_process)} receipts.")
+
+        page.close()
+        context.close()
         browser.close()
 
 
