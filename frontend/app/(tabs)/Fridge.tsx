@@ -1,11 +1,12 @@
-import { Text, View, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useEffect, useState } from "react";
 
 import FridgeTable from "@/components/fridgeTable";
 import AddItemForm from "@/components/fridgeItemForm";
 import  { FridgeItem } from "@/types/foodTypes";
-import { api } from "@/services/api";
+import { retrieveFridgeItems } from "@/services/api";
 import { colors } from "@/themes/colors";
+import AddFridgeForm from "@/components/fridgeItemForm";
 
 
 export default function FridgeInventory() {
@@ -15,7 +16,7 @@ export default function FridgeInventory() {
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const data = await api.getFridgeItems();
+        const data = await retrieveFridgeItems.getFridgeItems();
         setItems(data);
       } catch (error) {
         console.error("Error fetching fridge items:", error);
@@ -28,13 +29,13 @@ export default function FridgeInventory() {
   const handleItemAdded = () => {
     setShowAddForm(false);
     // Refresh the items list
-    api.getFridgeItems().then((data) => setItems(data));
+    retrieveFridgeItems.getFridgeItems().then((data) => setItems(data));
   };
 
   const handleItemRemoved = async (itemId: number) => {
     try {
-      await api.deleteFridgeItem(itemId);
-      const data = await api.getFridgeItems();
+      await retrieveFridgeItems.deleteFridgeItem(itemId);
+      const data = await retrieveFridgeItems.getFridgeItems();
       setItems(data);
     } catch (error) {
       console.error(`Error deleting fridge item with id ${itemId}:`, error);
@@ -44,7 +45,7 @@ export default function FridgeInventory() {
   return (
     <View style={styles.container}>
       <FridgeTable items={items} onAddPress={() => setShowAddForm(true)} onRemovePress={handleItemRemoved} />
-      <AddItemForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
+      <AddFridgeForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
     </View>
   );
 }

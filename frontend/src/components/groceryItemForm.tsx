@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { addFridgeItem } from "../services/api";
+import { addGroceryItem } from "../services/api";
 import { colors } from "@/themes/colors";
 import FormButtons from "./formButtons";
 
-export default function AddFridgeForm({ visible, onClose, onItemAdded }: {visible: boolean; onClose: () => void; onItemAdded: () => void }) {
+export default function AddGroceryForm({ visible, onClose, onItemAdded }: {visible: boolean; onClose: () => void; onItemAdded: () => void }) {
     const [ean, setEan] = useState("");
     const [name, setName] = useState("");
     const [brand, setBrand] = useState("");
@@ -12,7 +12,6 @@ export default function AddFridgeForm({ visible, onClose, onItemAdded }: {visibl
     const [weight, setWeight] = useState("");
     const [weightUnit, setWeightUnit] = useState("");
     const [image, setImage] = useState("");
-    const [expirationDate, setExpirationDate] = useState("");
 
     const resetForm = () => {
         setName("");
@@ -22,11 +21,10 @@ export default function AddFridgeForm({ visible, onClose, onItemAdded }: {visibl
         setWeight("");
         setWeightUnit("");
         setImage("");
-        setExpirationDate("");
     }
 
     const handleSubmit = async () => {
-        await addFridgeItem({
+        await addGroceryItem({
             ean,
             name,
             brand,
@@ -34,7 +32,6 @@ export default function AddFridgeForm({ visible, onClose, onItemAdded }: {visibl
             weight,
             weight_unit: weightUnit,
             image,
-            expiration_date: expirationDate.trim() ? expirationDate : null,
         });
         setName("");
         setEan("");
@@ -43,7 +40,6 @@ export default function AddFridgeForm({ visible, onClose, onItemAdded }: {visibl
         setWeight("");
         setWeightUnit("");
         setImage("");
-        setExpirationDate("");
         onItemAdded(); // Refresh the list after adding
         onClose(); // Close the form after adding
     }
@@ -70,9 +66,6 @@ export default function AddFridgeForm({ visible, onClose, onItemAdded }: {visibl
 
                 <Text style={formStyles.label}>Weight unit</Text>
                 <TextInput style={formStyles.input} placeholder="Unit" value={weightUnit} onChangeText={setWeightUnit} />
-
-                <Text style={formStyles.label}>Expiration Date</Text>
-                <TextInput style={formStyles.input} placeholder="Expiration (YYYY-MM-DD)" value={expirationDate} onChangeText={setExpirationDate} />
                 
                 <FormButtons onSave={handleSubmit} onCancel={handleClose} />
                 </View>

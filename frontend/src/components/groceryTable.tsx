@@ -25,7 +25,7 @@ export default function GroceryTable({ items, onAddPress, onRemovePress }: {item
                             <Text style={groceryStyles.itemText}>{item.weight} {item.weight_unit}</Text>
                         </View>
                         <View style={groceryStyles.dateCol}>
-                            <Text style={groceryStyles.itemText}>{item.price.toFixed(2)}$</Text>
+                            <Text style={groceryStyles.itemText}>{item.price.toFixed(2)}kr</Text>
                         </View>
                         <View style={groceryStyles.actionCol}>
                             <TouchableOpacity onPress={() => onRemovePress(item.id)} style={groceryStyles.buttonContainer}>
