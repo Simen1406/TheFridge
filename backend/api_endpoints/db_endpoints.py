@@ -22,6 +22,13 @@ def get_fridge_items(session: Session = Depends(get_session)):
     print(type(results))
     return results
 
+@router.get("/grocery-items_from_db")
+def get_grocery_items(session: Session = Depends(get_session)):
+    statement = select(FridgeItem).order_by(FridgeItem.expiration_date)   
+    results = session.exec(statement).all()
+    print(type(results))
+    return results
+
 @router.post("/ManualAddFridgeItem")
 def add_fridge_item(item: AddFridgeItem, session: Session = Depends(get_session)):
     new_item = FridgeItem.model_validate(item)
@@ -30,8 +37,24 @@ def add_fridge_item(item: AddFridgeItem, session: Session = Depends(get_session)
     session.refresh(new_item)
     return new_item
 
+@router.post("/ManualAddGroceryItem")
+def add_grocery_item(item: AddFridgeItem, session: Session = Depends(get_session)):
+    new_item = FridgeItem.model_validate(item)
+    session.add(new_item)
+    session.commit()
+    session.refresh(new_item)
+    return new_item
+
 @router.post("/deleteFridgeItem")
 def delete_fridge_item(item_id:int, session: Session = Depends(get_session)):
+    success = delete_item_by_id(item_id)
+    if success:
+        return {"message": f"Item with id {item_id} deleted successfully."}
+    else:
+        return {"message": f"Item with id {item_id} not found."}
+    
+@router.post("/deleteGroceryItem")
+def delete_grocery_item(item_id:int, session: Session = Depends(get_session)):
     success = delete_item_by_id(item_id)
     if success:
         return {"message": f"Item with id {item_id} deleted successfully."}
