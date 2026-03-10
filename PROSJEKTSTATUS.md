@@ -16,7 +16,7 @@
 ## Hva som bor gjores videre
 
 1. **Lag grocery-endepunkter for add/remove**
-   - Opprett backend-endepunkter som handterer innlegging og sletting av varer i grocery-listen.
+   - Opprett backend-endepunkter som handterer "adding" og sletting av varer i grocery-listen.
    - Speil flyten som allerede finnes for fridge der det passer.
 
 2. **Lag Python-skript som vasker data inn mot grocery-modellen**

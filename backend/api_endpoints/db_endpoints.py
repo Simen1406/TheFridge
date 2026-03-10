@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, Query, FastAPI
 from sqlmodel import Session, select
 
+from mockData.groceryItem import insert_mock_groceries
 from db.db import get_session, init_db
-from mockData.fridgeItems import insert_mock_data
+from mockData.fridgeItems import insert_mock_fridge_items
 from models.models import AddFridgeItem, FridgeItem
 from utils.db_utils.deletion import delete_item_by_id
 
@@ -11,7 +12,8 @@ router = APIRouter()
 @router.on_event("startup")
 def on_startup():
     init_db()
-    insert_mock_data(table_name="fridge_items")
+    insert_mock_groceries(table_name="grocery_items")
+    insert_mock_fridge_items(table_name="fridge_items")
 
 @router.get("/fridge-items_from_db")
 def get_fridge_items(session: Session = Depends(get_session)):

@@ -3,7 +3,8 @@ import os
 from sqlmodel import Session, select
 from models.models import FridgeItem
 from db.db import engine
-from mockData.fridgeItems import insert_mock_data
+from mockData.fridgeItems import insert_mock_fridge_items
+from mockData.groceryItem import insert_mock_groceries
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -36,7 +37,10 @@ def delete_all_items(table_name: str):
 
 def clear_and_reseed_table(table_name: str):
     delete_all_items(table_name)
-    insert_mock_data()
+    if table_name == "grocery_items":
+        insert_mock_groceries(table_name="grocery_items")
+    elif table_name == "fridge_items":
+        insert_mock_fridge_items(table_name="fridge_items")
 
 
 if __name__ == "__main__":

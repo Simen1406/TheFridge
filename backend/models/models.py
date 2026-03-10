@@ -30,7 +30,6 @@ class Groceries(SQLModel):
     weight: float
     weight_unit: str
     image: str | None
-    expiration_date: Optional[date] = Field(default=None, index=True)
 
 class GroceryItem(Groceries, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
