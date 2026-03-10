@@ -1,40 +1,39 @@
-﻿# Prosjektstatus - TheFridge
+# Prosjektstatus - TheFridge
 
 ## Hva som er gjort
 
-- Backend med FastAPI er satt opp med hovedapp, CORS og helse-endepunkter (`/` og `/ping`).
-- Databaseintegrasjon via SQLModel er pa plass, inkludert init ved startup og sesjonshandtering.
-- Datamodeller for fridge/grocery finnes i backend.
-- Mock-data for fridge settes inn ved oppstart dersom tabellen er tom.
-- API for fridge er koblet opp i frontend:
-  - Hente varer: `GET /fridge-items_from_db`
-  - Legge til vare: `POST /ManualAddFridgeItem`
-  - Slette vare: `POST /deleteFridgeItem`
-- Frontend med Expo/React Native er satt opp med faner for Home, Fridge og Groceries.
-- Fridge-siden henter data fra API og viser varene i tabell.
+1. Backend med FastAPI er satt opp med hovedapp, CORS og helse-endepunkter (`/` og `/ping`).
+2. Databaseintegrasjon via SQLModel er pa plass, inkludert init ved startup og sesjonshandtering.
+3. Datamodeller for `FridgeItem` og `GroceryItem` er i bruk i backend.
+4. Grocery-endepunkter er koblet riktig til grocery-tabell/modell:
+   - Hente varer: `GET /grocery-items_from_db` (fra `GroceryItem`)
+   - Legge til vare: `POST /ManualAddGroceryItem` (bruker `AddGroceryItem`)
+   - Slette vare: `POST /deleteGroceryItem` (tabellspesifikk sletting)
+5. Slette-logikk i backend er gjort tabellspesifikk for bade fridge og grocery.
+6. Frontend Fridge er koblet til API-klient med hente/legg-til/slett-flyt.
+7. Frontend Groceries er koblet til ekte API (ikke mock-data) med hente/legg-til/slett-flyt.
+8. Egen `AddGroceryForm` er lagt til i frontend.
+9. API-typing i frontend er oppdatert med `NewGroceryItem` for korrekt grocery payload.
+10. Trumf-kvitteringsskript er refaktorert til separerte funksjoner (login/nav, finn nedlastinger, last ned, orkestrering) og lagrer filer i lokal `downloads`-mappe.
 
-## Hva som bor gjores videre
+## Hva som bor gjores videre (prioritert)
 
-1. **Lag grocery-endepunkter for add/remove**
-   - Opprett backend-endepunkter som handterer "adding" og sletting av varer i grocery-listen.
-   - Speil flyten som allerede finnes for fridge der det passer.
+1. **Stabilisere Trumf-kvitteringsnedlasting**
+   - Lase selektorer mot faktisk DOM for menyknapp og "Last ned" i popup per kvittering.
+   - Legge til robust venting/retry og logging for elementer som ikke gir download-event.
 
-2. **Lag Python-skript som vasker data inn mot grocery-modellen**
+2. **Legg til validering og feilhandtering**
+   - Bedre feilmeldinger i frontend ved API-feil.
+   - Tydelige HTTP-feil i backend ved ugyldig input og DB-feil.
+
+3. **Lag Python-skript som vasker data inn mot grocery-modellen**
    - Normaliser felt/typer slik at data matcher `GroceryItem`-modellen.
    - Kjor vasken for mock-data og evt. data fra eksterne kilder for innsetting i DB.
 
-3. **Koble grocery til frontend**
-   - Erstatt mock-data i Groceries-skjermen med kall til backend.
-   - Koble `Add`/`Remove` handling til de nye grocery-endepunktene.
-
-4. **Legg til validering og feilhandtering**
-   - Bedre feilmeldinger i frontend.
-   - Tydelige HTTP-feil i backend ved ugyldig input og DB-feil.
-
-5. **Legg til tester og enkel CI**
+4. **Legg til tester og enkel CI**
    - API-tester for fridge/grocery endepunkter.
    - Enkle frontend-tester for sentrale flows.
 
-6. **Dokumentasjon og oppstartsguide**
+5. **Dokumentasjon og oppstartsguide**
    - Oppdater README med lokale steg for backend + frontend.
    - Dokumenter miljo-variabler (f.eks. `DATABASE_URL`) og vanlige feilscenarioer.
