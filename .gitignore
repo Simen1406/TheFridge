@@ -59,6 +59,6 @@ yarn-error.*
 *.db
 *.sqlite3
 
-#Kvitteringer
+#Kvitteringer og playwright session
 backend/scripts/trumf/downloads/**/*.pdf
-
+backend/scripts/trumf/*.json
