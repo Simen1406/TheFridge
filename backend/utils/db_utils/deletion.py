@@ -2,6 +2,7 @@ import os
 
 from sqlmodel import Session, select
 from models.models import FridgeItem
+from models.models import GroceryItem
 from db.db import engine
 from mockData.fridgeItems import insert_mock_fridge_items
 from mockData.groceryItem import insert_mock_groceries
@@ -15,9 +16,16 @@ def delete_table(table_name: str):
         connection.commit()
 
 
-def delete_item_by_id(item_id: int):
+def delete_item_by_id(table_name: str, item_id: int):
     with Session(engine) as session:
-        item = session.get(FridgeItem, item_id)
+        if table_name == "fridge_items":
+            item = session.get(FridgeItem, item_id)
+        elif table_name == "grocery_items":
+            item = session.get(GroceryItem, item_id)
+        else:
+            print(f"Invalid table name: {table_name}")
+            return False
+
         if item:
             session.delete(item)
             session.commit()
@@ -29,7 +37,14 @@ def delete_item_by_id(item_id: int):
 
 def delete_all_items(table_name: str):
     with Session(engine) as session:
-        items = session.exec(select(FridgeItem)).all()
+        if table_name == "fridge_items":
+            items = session.exec(select(FridgeItem)).all()
+        elif table_name == "grocery_items":
+            items = session.exec(select(GroceryItem)).all()
+        else:
+            print(f"Invalid table name: {table_name}")
+            return
+
         for item in items:
             session.delete(item)
         session.commit()
@@ -45,3 +60,4 @@ def clear_and_reseed_table(table_name: str):
 
 if __name__ == "__main__":
     delete_all_items("fridge_items")
+    delete_all_items("grocery_items")

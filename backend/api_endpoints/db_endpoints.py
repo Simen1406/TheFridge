@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from mockData.groceryItem import insert_mock_groceries
 from db.db import get_session, init_db
 from mockData.fridgeItems import insert_mock_fridge_items
-from models.models import AddFridgeItem, FridgeItem
+from models.models import AddFridgeItem, AddGroceryItem, FridgeItem, GroceryItem
 from utils.db_utils.deletion import delete_item_by_id
 
 router = APIRouter()
@@ -24,7 +24,7 @@ def get_fridge_items(session: Session = Depends(get_session)):
 
 @router.get("/grocery-items_from_db")
 def get_grocery_items(session: Session = Depends(get_session)):
-    statement = select(FridgeItem).order_by(FridgeItem.expiration_date)   
+    statement = select(GroceryItem).order_by(GroceryItem.price)   
     results = session.exec(statement).all()
     print(type(results))
     return results
@@ -38,8 +38,8 @@ def add_fridge_item(item: AddFridgeItem, session: Session = Depends(get_session)
     return new_item
 
 @router.post("/ManualAddGroceryItem")
-def add_grocery_item(item: AddFridgeItem, session: Session = Depends(get_session)):
-    new_item = FridgeItem.model_validate(item)
+def add_grocery_item(item: AddGroceryItem, session: Session = Depends(get_session)):
+    new_item = GroceryItem.model_validate(item)
     session.add(new_item)
     session.commit()
     session.refresh(new_item)
@@ -47,7 +47,7 @@ def add_grocery_item(item: AddFridgeItem, session: Session = Depends(get_session
 
 @router.post("/deleteFridgeItem")
 def delete_fridge_item(item_id:int, session: Session = Depends(get_session)):
-    success = delete_item_by_id(item_id)
+    success = delete_item_by_id(table_name="fridge_items", item_id=item_id)
     if success:
         return {"message": f"Item with id {item_id} deleted successfully."}
     else:
@@ -55,7 +55,7 @@ def delete_fridge_item(item_id:int, session: Session = Depends(get_session)):
     
 @router.post("/deleteGroceryItem")
 def delete_grocery_item(item_id:int, session: Session = Depends(get_session)):
-    success = delete_item_by_id(item_id)
+    success = delete_item_by_id(table_name="grocery_items", item_id=item_id)
     if success:
         return {"message": f"Item with id {item_id} deleted successfully."}
     else:
