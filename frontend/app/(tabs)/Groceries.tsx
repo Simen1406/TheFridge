@@ -1,9 +1,9 @@
-import { Text, View, StyleSheet, Button } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { colors } from "@/themes/colors";
 import GroceryTable from "@/components/groceryTable";
 import { useEffect, useState } from "react";
 import { GroceryItem } from "@/types/foodTypes";
-import { retrieveFridgeItems, retrieveGroceryItems } from "@/services/api";
+import { retrieveGroceryItems } from "@/services/api";
 import AddGroceryForm from "@/components/groceryItemForm";
 
 export default function FridgeInventory() {

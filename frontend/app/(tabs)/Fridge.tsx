@@ -2,7 +2,6 @@ import { View, StyleSheet } from "react-native";
 import { useEffect, useState } from "react";
 
 import FridgeTable from "@/components/fridgeTable";
-import AddItemForm from "@/components/fridgeItemForm";
 import  { FridgeItem } from "@/types/foodTypes";
 import { retrieveFridgeItems } from "@/services/api";
 import { colors } from "@/themes/colors";

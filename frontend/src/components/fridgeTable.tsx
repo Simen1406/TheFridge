@@ -1,114 +1,94 @@
-// reuseable table for fridge and grocery list
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
-import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
-import { colors } from "@/themes/colors";
+import { Text, View } from "react-native";
 import { FridgeItem } from "@/types/foodTypes";
+import InventoryTable, { StatusChip, inventoryTableStyles } from "@/components/inventoryTable";
 
-
-export default function FridgeTable({ items, onAddPress, onRemovePress }: {items: FridgeItem[], onAddPress: () => void, onRemovePress: (itemId: number) => void }) {
-    return (
-        <View style={fridgeStyles.background}>
-            
-            <View style={fridgeStyles.container}>
-                <View style={fridgeStyles.title}>
-                    <Text style = {fridgeStyles.title}>🧊 Fridge Inventory</Text>
-                    <Text style = {fridgeStyles.subtext}>See what's in your fridge</Text>
-                    <TouchableOpacity onPress={onAddPress} style={fridgeStyles.buttonContainer}>
-                        <Text style = {fridgeStyles.button}> + Add New Item </Text>
-                    </TouchableOpacity>
-                </View>
-                {items.map((item) => (
-                    <View key={item.id} style={fridgeStyles.row}>
-                        <View style={fridgeStyles.nameCol}>
-                            <Text style={fridgeStyles.itemText}>{item.name}</Text>
-                        </View>
-                        <View style={fridgeStyles.amountCol}>
-                            <Text style={fridgeStyles.itemText}>{item.weight} {item.weight_unit}</Text>
-                        </View>
-                        <View style={fridgeStyles.dateCol}>
-                            <Text style={fridgeStyles.itemText}>{item.expiration_date}</Text>
-                        </View>
-                        <View style={fridgeStyles.actionCol}>
-                            <TouchableOpacity onPress={() => onRemovePress(item.id)} style={fridgeStyles.buttonContainer}>
-                                <Text style = {fridgeStyles.button}> Remove </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ))}
+export default function FridgeTable({
+  items,
+  onAddPress,
+  onRemovePress,
+}: {
+  items: FridgeItem[];
+  onAddPress: () => void;
+  onRemovePress: (itemId: number) => void;
+}) {
+  return (
+    <InventoryTable
+      title="Fridge Inventory"
+      subtitle="Track what you have and what expires soon"
+      items={items}
+      addLabel="Add fridge item"
+      onAddPress={onAddPress}
+      onRemovePress={onRemovePress}
+      searchPlaceholder="Search fridge items..."
+      searchableText={(item) => `${item.name} ${item.brand} ${item.ean}`}
+      columns={[
+        {
+          key: "name",
+          header: "Name",
+          width: 220,
+          render: (item) => (
+            <View>
+              <Text style={inventoryTableStyles.primaryText}>{item.name}</Text>
+              <Text style={inventoryTableStyles.secondaryText}>{item.brand || "Unknown brand"}</Text>
             </View>
-        </View>
-    );    
+          ),
+        },
+        {
+          key: "quantity",
+          header: "Quantity",
+          width: 130,
+          render: (item) => (
+            <Text style={inventoryTableStyles.primaryText}>
+              {item.weight} {item.weight_unit}
+            </Text>
+          ),
+        },
+        {
+          key: "expires",
+          header: "Expires",
+          width: 140,
+          render: (item) => (
+            <Text style={inventoryTableStyles.primaryText}>{formatDate(item.expiration_date)}</Text>
+          ),
+        },
+        {
+          key: "status",
+          header: "Status",
+          width: 120,
+          align: "center",
+          render: (item) => {
+            const expiry = getExpiryStatus(item.expiration_date);
+            return <StatusChip label={expiry.label} tone={expiry.tone} />;
+          },
+        },
+      ]}
+    />
+  );
 }
 
-const fridgeStyles = StyleSheet.create({
-    background: {
-        width: "100%",
-        height: "100%",
-        backgroundColor: colors.background,
-    },
-    title: {
-        alignItems: "center",
-        fontSize: fontSizes.header,
-        color: colors.headerText,
-        fontWeight: fontWeights.bold,
-        marginBottom: 8,
-    },
-    subtext: {
-        fontSize: fontSizes.subtitle,
-        color: colors.darkGray,
-        paddingBottom: 20,
-    },
-    container: {
-        width: "80%",
-        maxWidth: 1000,
-        height: "70%",
-        alignSelf: "center",
-        backgroundColor: colors.background,
-        borderRadius: 8,
-        borderColor: colors.primary,
-        borderWidth: 3,
-        paddingTop: 30,
-        paddingHorizontal: 10,
-        shadowColor: colors.primary,
-        shadowRadius: 10,
-    },
-    row: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        paddingVertical: 15,
-        columnGap: 18,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.darkGray,
-    },
-    nameCol: {
-        flex: 1.2,
-        minWidth: 110,
-    },
-    amountCol: {
-        flex: 1,
-        minWidth: 130,
-    },
-    dateCol: {
-        flex: 1.1,
-        minWidth: 150,
-    },
-    actionCol: {
-        width: 90,
-        alignItems: "flex-start",
-    },
-    itemText: {
-        fontSize: fontSizes.body,
-        fontFamily: fontFamily.body,
-        color: colors.darkGray
-    },
-    button: {
-        fontSize: fontSizes.body,
-        fontFamily: fontFamily.body,
-        color: colors.primary,
-        textDecorationLine: "underline",
-    },
-    buttonContainer: {
-        padding: 4,
-    }
-});
+function formatDate(value: string | null) {
+  if (!value) return "Unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
+}
+
+function getExpiryStatus(value: string | null): {
+  label: string;
+  tone: "ok" | "warn" | "danger" | "neutral";
+} {
+  if (!value) return { label: "No date", tone: "neutral" };
+
+  const today = new Date();
+  const expiry = new Date(value);
+
+  if (Number.isNaN(expiry.getTime())) {
+    return { label: "Unknown", tone: "neutral" };
+  }
+
+  const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (daysLeft < 0) return { label: "Expired", tone: "danger" };
+  if (daysLeft <= 2) return { label: "Soon", tone: "warn" };
+  return { label: "Fresh", tone: "ok" };
+}

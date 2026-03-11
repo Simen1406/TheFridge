@@ -1,113 +1,77 @@
-// reuseable table for fridge and grocery list
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
-import { fontSizes, fontFamily, fontWeights } from "@/themes/fonts";
-import { colors } from "@/themes/colors";
+import { Text, View } from "react-native";
 import { GroceryItem } from "@/types/foodTypes";
+import InventoryTable, { StatusChip, inventoryTableStyles } from "@/components/inventoryTable";
 
-export default function GroceryTable({ items, onAddPress, onRemovePress }: {items: GroceryItem[], onAddPress: () => void, onRemovePress: (itemId: number) => void }) {
-    return (
-        <View style={groceryStyles.background}>
-            
-            <View style={groceryStyles.container}>
-                <View style={groceryStyles.title}>
-                    <Text style = {groceryStyles.title}>🧊 Your Shopping List</Text>
-                    <Text style = {groceryStyles.subtext}>See what's in your shopping list</Text>
-                    <TouchableOpacity onPress={onAddPress} style={groceryStyles.buttonContainer}>
-                        <Text style = {groceryStyles.button}> + Add New Item </Text>
-                    </TouchableOpacity>
-                </View>
-                {items.map((item) => (
-                    <View key={item.id} style={groceryStyles.row}>
-                        <View style={groceryStyles.nameCol}>
-                            <Text style={groceryStyles.itemText}>{item.name}</Text>
-                        </View>
-                        <View style={groceryStyles.amountCol}>
-                            <Text style={groceryStyles.itemText}>{item.weight} {item.weight_unit}</Text>
-                        </View>
-                        <View style={groceryStyles.dateCol}>
-                            <Text style={groceryStyles.itemText}>{item.price.toFixed(2)}kr</Text>
-                        </View>
-                        <View style={groceryStyles.actionCol}>
-                            <TouchableOpacity onPress={() => onRemovePress(item.id)} style={groceryStyles.buttonContainer}>
-                                <Text style = {groceryStyles.button}> Remove </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ))}
+export default function GroceryTable({
+  items,
+  onAddPress,
+  onRemovePress,
+}: {
+  items: GroceryItem[];
+  onAddPress: () => void;
+  onRemovePress: (itemId: number) => void;
+}) {
+  return (
+    <InventoryTable
+      title="Grocery List"
+      subtitle="Plan your next shopping run"
+      items={items}
+      addLabel="Add grocery item"
+      onAddPress={onAddPress}
+      onRemovePress={onRemovePress}
+      searchPlaceholder="Search grocery items..."
+      searchableText={(item) => `${item.name} ${item.brand} ${item.ean}`}
+      columns={[
+        {
+          key: "name",
+          header: "Name",
+          width: 220,
+          render: (item) => (
+            <View>
+              <Text style={inventoryTableStyles.primaryText}>{item.name}</Text>
+              <Text style={inventoryTableStyles.secondaryText}>{item.brand || "Unknown brand"}</Text>
             </View>
-        </View>
-    );    
+          ),
+        },
+        {
+          key: "quantity",
+          header: "Quantity",
+          width: 130,
+          render: (item) => (
+            <Text style={inventoryTableStyles.primaryText}>
+              {item.weight} {item.weight_unit}
+            </Text>
+          ),
+        },
+        {
+          key: "price",
+          header: "Price",
+          width: 120,
+          align: "right",
+          render: (item) => (
+            <Text style={inventoryTableStyles.primaryText}>{item.price.toFixed(2)} kr</Text>
+          ),
+        },
+        {
+          key: "status",
+          header: "Status",
+          width: 130,
+          align: "center",
+          render: (item) => {
+            const state = getPriceState(item.price);
+            return <StatusChip label={state.label} tone={state.tone} />;
+          },
+        },
+      ]}
+    />
+  );
 }
 
-const groceryStyles = StyleSheet.create({
-    background: {
-        width: "100%",
-        height: "100%",
-        backgroundColor: colors.background,
-    },
-    title: {
-        alignItems: "center",
-        fontSize: fontSizes.header,
-        color: colors.headerText,
-        fontWeight: fontWeights.bold,
-        marginBottom: 8,
-    },
-    subtext: {
-        fontSize: fontSizes.subtitle,
-        color: colors.darkGray,
-        paddingBottom: 20,
-    },
-    container: {
-        width: "80%",
-        maxWidth: 1000,
-        height: "70%",
-        alignSelf: "center",
-        backgroundColor: colors.background,
-        borderRadius: 8,
-        borderColor: colors.primary,
-        borderWidth: 3,
-        paddingTop: 30,
-        paddingHorizontal: 10,
-        shadowColor: colors.primary,
-        shadowRadius: 10,
-    },
-    row: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        paddingVertical: 15,
-        columnGap: 18,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.darkGray,
-    },
-    nameCol: {
-        flex: 1.2,
-        minWidth: 110,
-    },
-    amountCol: {
-        flex: 1,
-        minWidth: 130,
-    },
-    dateCol: {
-        flex: 1.1,
-        minWidth: 150,
-    },
-    actionCol: {
-        width: 90,
-        alignItems: "flex-start",
-    },
-    itemText: {
-        fontSize: fontSizes.body,
-        fontFamily: fontFamily.body,
-        color: colors.darkGray
-    },
-    button: {
-        fontSize: fontSizes.body,
-        fontFamily: fontFamily.body,
-        color: colors.primary,
-        textDecorationLine: "underline",
-    },
-    buttonContainer: {
-        padding: 4,
-    }
-});
+function getPriceState(price: number): {
+  label: string;
+  tone: "ok" | "warn" | "danger" | "neutral";
+} {
+  if (price <= 30) return { label: "Budget", tone: "ok" };
+  if (price <= 70) return { label: "Regular", tone: "warn" };
+  return { label: "High", tone: "danger" };
+}
