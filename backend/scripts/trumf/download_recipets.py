@@ -75,16 +75,13 @@ def expand_row(page:Page, row: Locator) -> bool:
     print(f"No toggle button found in row with text '{row.inner_text(timeout=2000).strip()}', or it is already expanded.")
     return False
 
-def expand_rows_until_cutoff(page: Page, latest_date_to_retrieve: str) -> list[Locator]:
-    last_row_to_expand, last_row_to_expand_text = find_last_row_to_expand(page, month="februar")
+def expand_rows_until_cutoff(page: Page, latest_date_to_retrieve: str) -> list[tuple[str, str]]:
+    last_row_to_expand, _ = find_last_row_to_expand(page, month="februar")
     expand_row(page, last_row_to_expand)
 
-    
     page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
-    rows_to_process: list[Locator] = []
-    #check for rows to expand until last month to expand, then check for rows to process until cutoff date is reached
-    
-        
+    rows_to_process: list[tuple[str, str]] = []
+
     cutoff_date = datetime.strptime(latest_date_to_retrieve, "%d.%m.%Y")
     rows = page.locator(
         "tr.ws-transaction-history-table__row:has(span.ws-transaction-history-table__description-date)"
@@ -96,7 +93,9 @@ def expand_rows_until_cutoff(page: Page, latest_date_to_retrieve: str) -> list[L
         try:
             transaction_date = datetime.strptime(date_text, "%d.%m.%Y")
             if transaction_date >= cutoff_date:
-                rows_to_process.append(row)
+                merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
+                merchant_text = merchant_loc.first.inner_text(timeout=2000).strip() if merchant_loc.count() > 0 else "unknown-store"
+                rows_to_process.append((date_text, merchant_text))
             else:
                 print(f"Skipping row with date {date_text} it is too long ago.")
         except ValueError:
@@ -113,44 +112,63 @@ def _safe_filename(value: str) -> str:
     return cleaned or "receipt"
 
 
-def download_receipt(page: Page, row: Locator, index: int) -> bool:
+def download_receipt(page: Page, target_date: str, target_merchant: str, index: int) -> bool:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    row.scroll_into_view_if_needed(timeout=2000)
-    expand_row(page, row)
 
-    # Prefer the known Trumf details/download button class, then fall back to text/link patterns.
-    download_candidates = [
-        row.locator("button.ngr-button.ws-transaction-history-table__details-button.ngr-button--cancel"),
-        row.locator("button.ws-transaction-history-table__details-button"),
-        row.locator("a:has-text('Last ned')"),
-        row.locator("button:has-text('Last ned')"),
-        row.locator("a[href*='kvittering']"),
-        row.locator("a[href*='receipt']"),
-    ]
+    if "/profil/kvitteringer" not in page.url:
+        page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
 
-    download_button = None
-    for candidate in download_candidates:
-        if candidate.count() > 0 and candidate.first.is_visible():
-            download_button = candidate.first
+    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
+    rows = page.locator(
+        "tr.ws-transaction-history-table__row:has(span.ws-transaction-history-table__description-date)"
+    )
+
+    target_row = None
+    for i in range(rows.count()):
+        row = rows.nth(i)
+        date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
+        if date_text != target_date:
+            continue
+
+        merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
+        merchant_text = merchant_loc.first.inner_text(timeout=2000).strip() if merchant_loc.count() > 0 else "unknown-store"
+        if merchant_text == target_merchant:
+            target_row = row
             break
 
-    if download_button is None:
-        print(f"[{index}] No download button found for this row.")
+    if target_row is None:
+        print(f"[{index}] Could not find list row for {target_date} - {target_merchant}.")
         return False
 
-    date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
-    merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
-    merchant_text = merchant_loc.first.inner_text(timeout=2000).strip() if merchant_loc.count() > 0 else "unknown-store"
-    base_name = _safe_filename(f"{date_text}_{merchant_text}_{index + 1}")
+    target_row.scroll_into_view_if_needed(timeout=2000)
+    expand_row(page, target_row)
 
-    with page.expect_download(timeout=15000) as download_info:
-        download_button.click()
+    details_button = target_row.locator(
+        "button.ngr-button.ws-transaction-history-table__details-button.ngr-button--cancel"
+    ).first
+    if details_button.count() == 0:
+        details_button = target_row.locator("button.ws-transaction-history-table__details-button").first
+    if details_button.count() == 0:
+        print(f"[{index}] No details button found for {target_date} - {target_merchant}.")
+        return False
+
+    details_button.click()
+    page.wait_for_selector("button[aria-label='downloadReceipt']", timeout=15000)
+
+    receipt_download_button = page.locator("button[aria-label='downloadReceipt']").first
+    base_name = _safe_filename(f"{target_date}_{target_merchant}_{index + 1}")
+
+    with page.expect_download(timeout=20000) as download_info:
+        receipt_download_button.click()
 
     download = download_info.value
     extension = Path(download.suggested_filename).suffix or ".pdf"
     target_path = DOWNLOAD_DIR / f"{base_name}{extension}"
     download.save_as(str(target_path))
     print(f"[{index}] Downloaded: {target_path.name}")
+
+    page.go_back(wait_until="domcontentloaded")
+    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
     return True
 
 
@@ -178,9 +196,9 @@ def run_download_flow():
         print(f"Ready to download {len(rows_to_process)} receipts.")
 
         downloaded = 0
-        for i, row in enumerate(rows_to_process):
+        for i, (date_text, merchant_text) in enumerate(rows_to_process):
             try:
-                if download_receipt(page, row, i):
+                if download_receipt(page, date_text, merchant_text, i):
                     downloaded += 1
             except TimeoutError:
                 print(f"[{i}] Download timed out for row.")
