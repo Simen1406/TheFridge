@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from playwright.sync_api import Locator, Page, TimeoutError, sync_playwright
+import re
 
 RECEIPTS_URL = "https://www.trumf.no/profil/kvitteringer"
 DOWNLOAD_DIR = Path(__file__).resolve().parent / "downloads"
@@ -106,8 +107,51 @@ def expand_rows_until_cutoff(page: Page, latest_date_to_retrieve: str) -> list[L
     return rows_to_process
 
 
-def download_receipt(page: Page):
-    pass
+def _safe_filename(value: str) -> str:
+    cleaned = re.sub(r"[\\/:*?\"<>|]+", "_", value)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned or "receipt"
+
+
+def download_receipt(page: Page, row: Locator, index: int) -> bool:
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    row.scroll_into_view_if_needed(timeout=2000)
+    expand_row(page, row)
+
+    # Prefer the known Trumf details/download button class, then fall back to text/link patterns.
+    download_candidates = [
+        row.locator("button.ngr-button.ws-transaction-history-table__details-button.ngr-button--cancel"),
+        row.locator("button.ws-transaction-history-table__details-button"),
+        row.locator("a:has-text('Last ned')"),
+        row.locator("button:has-text('Last ned')"),
+        row.locator("a[href*='kvittering']"),
+        row.locator("a[href*='receipt']"),
+    ]
+
+    download_button = None
+    for candidate in download_candidates:
+        if candidate.count() > 0 and candidate.first.is_visible():
+            download_button = candidate.first
+            break
+
+    if download_button is None:
+        print(f"[{index}] No download button found for this row.")
+        return False
+
+    date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
+    merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
+    merchant_text = merchant_loc.first.inner_text(timeout=2000).strip() if merchant_loc.count() > 0 else "unknown-store"
+    base_name = _safe_filename(f"{date_text}_{merchant_text}_{index + 1}")
+
+    with page.expect_download(timeout=15000) as download_info:
+        download_button.click()
+
+    download = download_info.value
+    extension = Path(download.suggested_filename).suffix or ".pdf"
+    target_path = DOWNLOAD_DIR / f"{base_name}{extension}"
+    download.save_as(str(target_path))
+    print(f"[{index}] Downloaded: {target_path.name}")
+    return True
 
 
 
@@ -132,6 +176,18 @@ def run_download_flow():
 
         rows_to_process = expand_rows_until_cutoff(page, latest_date_to_retrieve="17.02.2026")
         print(f"Ready to download {len(rows_to_process)} receipts.")
+
+        downloaded = 0
+        for i, row in enumerate(rows_to_process):
+            try:
+                if download_receipt(page, row, i):
+                    downloaded += 1
+            except TimeoutError:
+                print(f"[{i}] Download timed out for row.")
+            except Exception as exc:
+                print(f"[{i}] Download failed: {exc}")
+
+        print(f"Downloaded {downloaded}/{len(rows_to_process)} receipts to {DOWNLOAD_DIR}")
 
         page.close()
         context.close()
