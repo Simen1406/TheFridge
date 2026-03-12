@@ -42,55 +42,69 @@ def ensure_logged_in(page: Page, context) -> None:
     context.storage_state(path=str(SESSION_FILE))
     print(f"Saved new session to {SESSION_FILE}")
 
+def find_last_row_to_expand(page: Page, month: str):
+    page.wait_for_selector(
+        "th.ws-transaction-history-table__col--description.ws-transaction-history-table__col",
+        timeout=15000,
+    )
+    month_cells = page.locator(
+        "th.ws-transaction-history-table__col--description.ws-transaction-history-table__col",
+        has_text=month,
+    )
+    count = month_cells.count()
+    if count == 0:
+        raise ValueError(f"Could not find any month row with text '{month}'")
 
-def expand_rows(page: Page):
+    month_cell = month_cells.first
+    month_text = month_cell.inner_text(timeout=2000).strip()
+    month_row = month_cell.locator("xpath=..")  # parent <tr>
+    print(f"Found month row to expand: '{month_text}'")
+    return month_row, month_text
+
+def expand_row(page:Page, row: Locator) -> bool:
+    toggle_button = row.locator("button.ws-transaction-history-table__toggle-button")
+    if toggle_button.count() > 0:
+        toggle = toggle_button.first
+        row.scroll_into_view_if_needed(timeout=2000)
+        aria_expanded = (toggle.get_attribute("aria-expanded") or "").lower()
+        if aria_expanded != "true":
+            toggle.click()
+            page.wait_for_timeout(250)
+            return True
+    print(f"No toggle button found in row with text '{row.inner_text(timeout=2000).strip()}', or it is already expanded.")
+    return False
+
+def expand_rows_until_cutoff(page: Page, latest_date_to_retrieve: str) -> list[Locator]:
+    last_row_to_expand, last_row_to_expand_text = find_last_row_to_expand(page, month="februar")
+    expand_row(page, last_row_to_expand)
+
+    
     page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
-    expand_buttons = page.locator("button.ws-transaction-history-table__toggle-button")
-    count = expand_buttons.count()
-
-    expanded = 0
-    for i in range(count):
-        button = expand_buttons.nth(i)
-        if button.is_visible():
-            button.click()
-            expanded += 1
-            page.wait_for_timeout(300)
-
-    print(f"Expanded {expanded} rows.")
+    rows_to_process: list[Locator] = []
+    #check for rows to expand until last month to expand, then check for rows to process until cutoff date is reached
+    
         
-            
-def find_receipt_rows(page: Page):
-    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
+    cutoff_date = datetime.strptime(latest_date_to_retrieve, "%d.%m.%Y")
     rows = page.locator(
         "tr.ws-transaction-history-table__row:has(span.ws-transaction-history-table__description-date)"
     )
-    rows = list(rows.all())
-    count = len(rows)
-    print(f"Found {count} dated rows in the transaction history table.")
-    return rows
+    count = rows.count()
+    for i in range(count):
+        row = rows.nth(i)
+        date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
+        try:
+            transaction_date = datetime.strptime(date_text, "%d.%m.%Y")
+            if transaction_date >= cutoff_date:
+                rows_to_process.append(row)
+            else:
+                print(f"Skipping row with date {date_text} it is too long ago.")
+        except ValueError:
+            print(f"Could not parse date '{date_text}' in row {i}, skipping.")
 
-def find_receipt_dates(rows: list[Locator], latest_date_to_retrieve: str):
-    cutoff_date = datetime.strptime(latest_date_to_retrieve, "%d.%m.%Y")
-    rows_to_process = []
-
-    for i, row in enumerate(rows):
-        date_locator = row.locator("span.ws-transaction-history-table__description-date")
-        if date_locator.count() == 0:
-            print(f"[{i}] Skip row without date.")
-            continue
-
-        date_text = date_locator.first.inner_text(timeout=2000).strip()
-        row_date = datetime.strptime(date_text, "%d.%m.%Y")
-
-        if row_date >= cutoff_date:
-            rows_to_process.append(row)
-            print(f"[{i}] Keep row with date {date_text}")
-        else:
-            print(f"[{i}] Stop at date {date_text} (< {latest_date_to_retrieve})")
-            break
-
+    print(f"Total rows found: {count}")
     print(f"Rows to process: {len(rows_to_process)}")
     return rows_to_process
+
 
 def download_receipt(page: Page):
     pass
@@ -116,9 +130,7 @@ def run_download_flow():
             context.storage_state(path=str(SESSION_FILE))
             print(f"Saved new session to {SESSION_FILE}")
 
-        expand_rows(page)
-        rows = find_receipt_rows(page)
-        rows_to_process = find_receipt_dates(rows, latest_date_to_retrieve="17.02.2026")
+        rows_to_process = expand_rows_until_cutoff(page, latest_date_to_retrieve="17.02.2026")
         print(f"Ready to download {len(rows_to_process)} receipts.")
 
         page.close()
