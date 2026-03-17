@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import FridgeHero from "@/components/fridgeHero";
+import { ApiRequestError, pingApi } from "@/services/api";
 import { colors } from "@/themes/colors";
-
-const API_URL = "http://localhost:8000";
 
 // Home page
 export default function Home() {
@@ -13,12 +12,16 @@ export default function Home() {
   const testConnection = async () => {
     try {
       setStatus("Testing connection...");
-      const response = await fetch(`${API_URL}/ping`);
-      const data = await response.json();
+      const data = await pingApi();
 
       setStatus(`Connected, API Response: ${JSON.stringify(data)}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof ApiRequestError
+          ? `${error.message} (HTTP ${error.status})`
+          : error instanceof Error
+            ? error.message
+            : "Unknown error";
       setStatus(`Connection failed: ${errorMessage}`);
     }
   };

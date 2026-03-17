@@ -1,6 +1,51 @@
-// Use localhost for web, your IP for mobile
+import type { FridgeItem, GroceryItem } from "@/types/foodTypes";
 
-const API_BASE_URL = "http://localhost:8000";
+// Use localhost for web, your IP for mobile.
+export const API_BASE_URL = "http://localhost:8000";
+
+type ApiErrorDetails = {
+    detail?: string;
+    message?: string;
+};
+
+export class ApiRequestError extends Error {
+    status: number;
+    details: unknown;
+
+    constructor(message: string, status: number, details: unknown) {
+        super(message);
+        this.name = "ApiRequestError";
+        this.status = status;
+        this.details = details;
+    }
+}
+
+function getErrorMessage(statusText: string, details: unknown) {
+    if (details && typeof details === "object") {
+        const payload = details as ApiErrorDetails;
+        if (typeof payload.detail === "string") return payload.detail;
+        if (typeof payload.message === "string") return payload.message;
+    }
+
+    return statusText || "API request failed";
+}
+
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${path}`, init);
+    let data: unknown = null;
+
+    try {
+        data = await response.json();
+    } catch {
+        data = null;
+    }
+
+    if (!response.ok) {
+        throw new ApiRequestError(getErrorMessage(response.statusText, data), response.status, data);
+    }
+
+    return data as T;
+}
 
 export type NewFridgeItem = {
     ean: string;
@@ -25,47 +70,45 @@ export type NewGroceryItem = {
 
 export const retrieveFridgeItems = {
     getFridgeItems: async () => {
-        const response = await fetch(`${API_BASE_URL}/fridge-items_from_db`);
-        return response.json();
+        return requestJson<FridgeItem[]>("/fridge-items_from_db");
     },
     deleteFridgeItem: async (itemId: number) => {
-        const response = await fetch(`${API_BASE_URL}/deleteFridgeItem?item_id=${itemId}`, {
+        return requestJson<{ success?: boolean }>(`/deleteFridgeItem?item_id=${itemId}`, {
             method: "POST",
         });
-        return response.json();
     },
 };
 
 export const retrieveGroceryItems = {
     getGroceryItems: async () => {
-        const respone = await fetch (`${API_BASE_URL}/grocery-items_from_db`);
-        return respone.json();
+        return requestJson<GroceryItem[]>("/grocery-items_from_db");
     },
     deleteGroceryItem: async (itemId: number) => {
-        const repsone = await fetch(`${API_BASE_URL}/deleteGroceryItem?item_id=${itemId}`, {
+        return requestJson<{ success?: boolean }>(`/deleteGroceryItem?item_id=${itemId}`, {
             method: "POST",
         });
-        return repsone.json();
     }
 };
 
 export const addFridgeItem = async (item: NewFridgeItem) => {
-    const response = await fetch(`${API_BASE_URL}/ManualAddFridgeItem`, {
+    return requestJson<FridgeItem>("/ManualAddFridgeItem", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
         body: JSON.stringify(item),
     });
-    return response.json();
 };
 export const addGroceryItem = async (item: NewGroceryItem) => {
-    const response = await fetch(`${API_BASE_URL}/ManualAddGroceryItem`, {
+    return requestJson<GroceryItem>("/ManualAddGroceryItem", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
         body: JSON.stringify(item),
     });
-    return response.json();
+};
+
+export const pingApi = async () => {
+    return requestJson<{ ping: string }>("/ping");
 };
