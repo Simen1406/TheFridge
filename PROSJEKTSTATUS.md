@@ -37,3 +37,45 @@
 5. **Dokumentasjon og oppstartsguide**
    - Oppdater README med lokale steg for backend + frontend.
    - Dokumenter miljo-variabler (f.eks. `DATABASE_URL`) og vanlige feilscenarioer.
+
+## Isolert frontend - neste sma steg
+
+1. **Legg til loading-state i Fridge- og Groceries-skjermene**
+   - Vis tydelig "laster..." mens API-kall pagaar.
+   - Behold tabellvisning nar data er ferdig hentet.
+
+2. **Legg til error/empty-state i inventory-sider**
+   - Vis brukervennlig feilbanner ved hentefeil.
+   - Vis tydelig tom-liste-melding nar ingen varer finnes.
+
+3. **Legg til validering i begge skjema**
+   - Required-felt: navn, pris, vekt, enhet.
+   - Numerisk sjekk for pris/vekt og datoformat (`YYYY-MM-DD`) for fridge.
+
+4. **Hindre dobbelt-submit i skjema**
+   - Deaktiver lagre-knapp mens request er i gang.
+   - Vis enkel pending-tekst pa knappen ved innsending.
+
+5. **Gjor modal-skjema responsive**
+   - Erstatt fast `width: "30%"` med mobilvennlig bredde (`width: "90%"` + `maxWidth`).
+   - Verifiser layout pa bade mobil og web.
+
+6. **Rydd toolbar placeholders i InventoryTable**
+   - Bytt ut "V" og "S" med tydelig tekst/ikon.
+   - Fjern ubrukt filter-knapp hvis filter ikke er implementert ennå.
+
+7. **Standardiser valutaformat**
+   - Bruk samme valutaenhet pa tvers av skjermer.
+   - Flytt formattering til en liten delt util-funksjon.
+
+8. **Legg til frontend kvalitetsskript**
+   - Legg til `typecheck` og `lint` script i `frontend/package.json`.
+   - Kjor dem lokalt som fast verifikasjonstrinn.
+
+9. **Flytt hardkodet CommonFridgeItems-data til `src/data`**
+   - Gjenbruk status/dato-hjelpere i stedet for duplisering.
+   - Hold sidekomponenten fokusert pa presentasjon.
+
+10. **Oppdater frontend dokumentasjon**
+   - Oppdater relevante `read.md`-filer med dagens komponent/service-flyt.
+   - Beskriv kort hvor nye komponenter skal legges.
