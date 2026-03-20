@@ -9,14 +9,18 @@ import AddGroceryForm from "@/components/groceryItemForm";
 export default function FridgeInventory() {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchItems = async () => {
+      setIsLoading(true);
       try {
         const data = await retrieveGroceryItems.getGroceryItems();
         setItems(data);
       } catch (error) {
         console.error("Error fetching grocery items:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -26,7 +30,11 @@ export default function FridgeInventory() {
   const handleItemAdded = () => {
     setShowAddForm(false);
     // Refresh the items list
-    retrieveGroceryItems.getGroceryItems().then((data) => setItems(data));
+    setIsLoading(true);
+    retrieveGroceryItems
+      .getGroceryItems()
+      .then((data) => setItems(data))
+      .finally(() => setIsLoading(false));
   };
 
   const handleItemRemoved = async (itemId: number) => {
@@ -40,7 +48,12 @@ export default function FridgeInventory() {
   };
   return (
     <View style={styles.container}>
-      <GroceryTable items={items} onAddPress={() => setShowAddForm(true)} onRemovePress={handleItemRemoved} />
+      <GroceryTable
+        items={items}
+        onAddPress={() => setShowAddForm(true)}
+        onRemovePress={handleItemRemoved}
+        isLoading={isLoading}
+      />
       <AddGroceryForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
     </View>  
   )

@@ -6,10 +6,12 @@ export default function GroceryTable({
   items,
   onAddPress,
   onRemovePress,
+  isLoading = false,
 }: {
   items: GroceryItem[];
   onAddPress: () => void;
   onRemovePress: (itemId: number) => void;
+  isLoading?: boolean;
 }) {
   return (
     <InventoryTable
@@ -19,6 +21,7 @@ export default function GroceryTable({
       addLabel="Add grocery item"
       onAddPress={onAddPress}
       onRemovePress={onRemovePress}
+      isLoading={isLoading}
       searchPlaceholder="Search grocery items..."
       searchableText={(item) => `${item.name} ${item.brand} ${item.ean}`}
       columns={[

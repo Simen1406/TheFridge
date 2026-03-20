@@ -6,10 +6,12 @@ export default function FridgeTable({
   items,
   onAddPress,
   onRemovePress,
+  isLoading = false,
 }: {
   items: FridgeItem[];
   onAddPress: () => void;
   onRemovePress: (itemId: number) => void;
+  isLoading?: boolean;
 }) {
   return (
     <InventoryTable
@@ -19,6 +21,7 @@ export default function FridgeTable({
       addLabel="Add fridge item"
       onAddPress={onAddPress}
       onRemovePress={onRemovePress}
+      isLoading={isLoading}
       searchPlaceholder="Search fridge items..."
       searchableText={(item) => `${item.name} ${item.brand} ${item.ean}`}
       columns={[
