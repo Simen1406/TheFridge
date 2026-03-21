@@ -135,38 +135,9 @@ export default function CommonFridgeItemsPage() {
     return commonFridgeItems;
   }, [activeFilter]);
 
-  const expiringCount = commonFridgeItems.filter(
-    (item) => daysUntil(item.expiration_date) >= 0 && daysUntil(item.expiration_date) <= 2
-  ).length;
-
-  const totalValue = commonFridgeItems.reduce((sum, item) => sum + item.price, 0);
-
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <Text style={styles.kicker}>Inventory presets</Text>
-          <Text style={styles.title}>Common Fridge Items</Text>
-          <Text style={styles.subtitle}>
-            A starter collection you can keep stocked every week.
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{commonFridgeItems.length}</Text>
-              <Text style={styles.statLabel}>Tracked items</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{expiringCount}</Text>
-              <Text style={styles.statLabel}>Expiring soon</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>${totalValue.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Estimated value</Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.filterRow}>
           {filterPills.map((pill) => (
             <TouchableOpacity
@@ -269,59 +240,6 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 28,
     gap: 14,
-  },
-  hero: {
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "rgba(211, 211, 211, 0.24)",
-    borderWidth: 1,
-    borderColor: "rgba(6, 30, 41, 0.25)",
-  },
-  kicker: {
-    fontFamily: fontFamily.body,
-    fontSize: fontSizes.small + 1,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    color: colors.headerText,
-    opacity: 0.8,
-  },
-  title: {
-    marginTop: 4,
-    fontFamily: fontFamily.header,
-    fontSize: fontSizes.header,
-    fontWeight: fontWeights.bold,
-    color: colors.headerText,
-  },
-  subtitle: {
-    marginTop: 6,
-    fontFamily: fontFamily.body,
-    fontSize: fontSizes.body,
-    color: colors.bodyText,
-  },
-  statsRow: {
-    marginTop: 14,
-    flexDirection: "row",
-    gap: 8,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    backgroundColor: "rgba(53, 78, 86, 0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(6, 30, 41, 0.25)",
-  },
-  statValue: {
-    fontFamily: fontFamily.header,
-    fontSize: fontSizes.subtitle,
-    color: colors.headerText,
-  },
-  statLabel: {
-    marginTop: 2,
-    fontFamily: fontFamily.body,
-    fontSize: fontSizes.small + 1,
-    color: colors.bodyText,
   },
   filterRow: {
     flexDirection: "row",

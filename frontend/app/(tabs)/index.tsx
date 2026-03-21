@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import FridgeHero from "@/components/fridgeHero";
+import HeroHeader from "@/components/heroHeader";
 import { ApiRequestError, pingApi } from "@/services/api";
 import { colors } from "@/themes/colors";
 
@@ -28,10 +28,20 @@ export default function Home() {
 
   return (
     <ScrollView contentContainerStyle={styles.contentContainer} style={styles.container}>
-      <FridgeHero
-        title="Inside The Fridge"
-        subtitle="Restock in motion"
-        caption="Ingredients drift shelf-to-shelf to simulate a freshly organized fridge."
+      <HeroHeader
+        eyebrow="Home snapshot"
+        title="Know what is in your fridge before you shop."
+        subtitle="Track inventory, catch expiring items, and build smarter grocery runs."
+        caption="Track your groceries and see what's in your fridge and cut waste."
+        primaryAction={{ label: "Quick add item" }}
+        secondaryAction={{ label: "Review expiring" }}
+        stats={[
+          { value: "18", label: "Tracked now" },
+          { value: "3", label: "Expiring soon" },
+          { value: "26%", label: "Waste cut" },
+        ]}
+        previewTitle="Fridge pulse"
+        previewItems={["Inventory synced", "List prepared", "Expiry watch active"]}
       />
 
       <Text style={styles.title}>Home</Text>
