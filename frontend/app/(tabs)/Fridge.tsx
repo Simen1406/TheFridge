@@ -11,14 +11,18 @@ import AddFridgeForm from "@/components/fridgeItemForm";
 export default function FridgeInventory() {
   const [items, setItems] = useState<FridgeItem[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchItems = async () => {
+      setIsLoading(true);
       try {
         const data = await retrieveFridgeItems.getFridgeItems();
         setItems(data);
       } catch (error) {
         console.error("Error fetching fridge items:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -28,7 +32,11 @@ export default function FridgeInventory() {
   const handleItemAdded = () => {
     setShowAddForm(false);
     // Refresh the items list
-    retrieveFridgeItems.getFridgeItems().then((data) => setItems(data));
+    setIsLoading(true);
+    retrieveFridgeItems
+      .getFridgeItems()
+      .then((data) => setItems(data))
+      .finally(() => setIsLoading(false));
   };
 
   const handleItemRemoved = async (itemId: number) => {
@@ -43,7 +51,12 @@ export default function FridgeInventory() {
 
   return (
     <View style={styles.container}>
-      <FridgeTable items={items} onAddPress={() => setShowAddForm(true)} onRemovePress={handleItemRemoved} />
+      <FridgeTable
+        items={items}
+        onAddPress={() => setShowAddForm(true)}
+        onRemovePress={handleItemRemoved}
+        isLoading={isLoading}
+      />
       <AddFridgeForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
     </View>
   );
@@ -52,8 +65,10 @@ export default function FridgeInventory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 35,
     padding: 20,
     backgroundColor: colors.background,
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
