@@ -1,4 +1,4 @@
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { useEffect, useState } from "react";
 
 import FridgeTable from "@/components/fridgeTable";
@@ -6,6 +6,7 @@ import  { FridgeItem } from "@/types/foodTypes";
 import { retrieveFridgeItems } from "@/services/api";
 import { colors } from "@/themes/colors";
 import AddFridgeForm from "@/components/fridgeItemForm";
+import SharedNav from "@/components/navComponent";
 
 
 export default function FridgeInventory() {
@@ -51,6 +52,8 @@ export default function FridgeInventory() {
 
   return (
     <View style={styles.container}>
+      {Platform.OS === "web" ? <SharedNav /> : null}
+      <View style={styles.content}>
       <FridgeTable
         items={items}
         onAddPress={() => setShowAddForm(true)}
@@ -58,6 +61,7 @@ export default function FridgeInventory() {
         isLoading={isLoading}
       />
       <AddFridgeForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
+      </View>
     </View>
   );
 }
@@ -65,9 +69,12 @@ export default function FridgeInventory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
     paddingTop: 35,
     padding: 20,
-    backgroundColor: colors.background,
     alignItems: "center",
   },
   title: {

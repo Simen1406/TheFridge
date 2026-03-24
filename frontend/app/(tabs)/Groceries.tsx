@@ -1,10 +1,11 @@
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { colors } from "@/themes/colors";
 import GroceryTable from "@/components/groceryTable";
 import { useEffect, useState } from "react";
 import { GroceryItem } from "@/types/foodTypes";
 import { retrieveGroceryItems } from "@/services/api";
 import AddGroceryForm from "@/components/groceryItemForm";
+import SharedNav from "@/components/navComponent";
 
 export default function FridgeInventory() {
   const [items, setItems] = useState<GroceryItem[]>([]);
@@ -48,6 +49,8 @@ export default function FridgeInventory() {
   };
   return (
     <View style={styles.container}>
+      {Platform.OS === "web" ? <SharedNav /> : null}
+      <View style={styles.content}>
       <GroceryTable
         items={items}
         onAddPress={() => setShowAddForm(true)}
@@ -55,16 +58,20 @@ export default function FridgeInventory() {
         isLoading={isLoading}
       />
       <AddGroceryForm visible={showAddForm} onClose={() => setShowAddForm(false)} onItemAdded={handleItemAdded} />
-    </View>  
+      </View>
+    </View>
   )
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
     paddingTop: 35,
     padding: 20,
-    backgroundColor: colors.background,
     alignItems: "center",
   }
 });

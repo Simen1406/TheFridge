@@ -6,9 +6,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 
 import { FridgeItem } from "@/types/foodTypes";
+import SharedNav from "@/components/navComponent";
 import { colors } from "@/themes/colors";
 import { fontFamily, fontSizes, fontWeights } from "@/themes/fonts";
 
@@ -138,70 +140,73 @@ export default function CommonFridgeItemsPage() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.filterRow}>
-          {filterPills.map((pill) => (
-            <TouchableOpacity
-              key={pill.key}
-              style={[styles.filterPill, activeFilter === pill.key && styles.filterPillActive]}
-              onPress={() => setActiveFilter(pill.key)}
-            >
-              <Text
-                style={[
-                  styles.filterPillText,
-                  activeFilter === pill.key && styles.filterPillTextActive,
-                ]}
+        {Platform.OS === "web" ? <SharedNav /> : null}
+        <View style={styles.mainContent}>
+          <View style={styles.filterRow}>
+            {filterPills.map((pill) => (
+              <TouchableOpacity
+                key={pill.key}
+                style={[styles.filterPill, activeFilter === pill.key && styles.filterPillActive]}
+                onPress={() => setActiveFilter(pill.key)}
               >
-                {pill.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          {filteredItems.map((item) => {
-            const status = getStatus(item.expiration_date);
-            return (
-              <View key={item.id} style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <View>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemBrand}>{item.brand}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.statusChip,
-                      status.tone === "fresh" && styles.statusFresh,
-                      status.tone === "soon" && styles.statusSoon,
-                      status.tone === "expired" && styles.statusExpired,
-                    ]}
-                  >
-                    <Text style={styles.statusText}>{status.label}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.itemMetaRow}>
-                  <Text style={styles.metaText}>
-                    Quantity: {item.weight} {item.weight_unit}
-                  </Text>
-                  <Text style={styles.metaText}>Price: ${item.price.toFixed(2)}</Text>
-                </View>
-                <Text style={styles.expiryText}>
-                  Expires: {formatDate(item.expiration_date)}
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    activeFilter === pill.key && styles.filterPillTextActive,
+                  ]}
+                >
+                  {pill.label}
                 </Text>
-              </View>
-            );
-          })}
-        </View>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <View style={styles.suggestionBox}>
-          <Text style={styles.suggestionTitle}>Smart Suggestions</Text>
-          <Text style={styles.suggestionItem}>- Use spinach + eggs for a quick omelet tonight.</Text>
-          <Text style={styles.suggestionItem}>
-            - Restock milk and yogurt this weekend to keep baseline inventory stable.
-          </Text>
-          <Text style={styles.suggestionItem}>
-            - Batch-cook chicken and save 2 ready meals for busy weekdays.
-          </Text>
+          <View style={styles.section}>
+            {filteredItems.map((item) => {
+              const status = getStatus(item.expiration_date);
+              return (
+                <View key={item.id} style={styles.itemCard}>
+                  <View style={styles.itemHeader}>
+                    <View>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemBrand}>{item.brand}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusChip,
+                        status.tone === "fresh" && styles.statusFresh,
+                        status.tone === "soon" && styles.statusSoon,
+                        status.tone === "expired" && styles.statusExpired,
+                      ]}
+                    >
+                      <Text style={styles.statusText}>{status.label}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.itemMetaRow}>
+                    <Text style={styles.metaText}>
+                      Quantity: {item.weight} {item.weight_unit}
+                    </Text>
+                    <Text style={styles.metaText}>Price: ${item.price.toFixed(2)}</Text>
+                  </View>
+                  <Text style={styles.expiryText}>
+                    Expires: {formatDate(item.expiration_date)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.suggestionBox}>
+            <Text style={styles.suggestionTitle}>Smart Suggestions</Text>
+            <Text style={styles.suggestionItem}>- Use spinach + eggs for a quick omelet tonight.</Text>
+            <Text style={styles.suggestionItem}>
+              - Restock milk and yogurt this weekend to keep baseline inventory stable.
+            </Text>
+            <Text style={styles.suggestionItem}>
+              - Batch-cook chicken and save 2 ready meals for busy weekdays.
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -236,9 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
+    paddingBottom: 28,
+    gap: 14,
+  },
+  mainContent: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 28,
     gap: 14,
   },
   filterRow: {

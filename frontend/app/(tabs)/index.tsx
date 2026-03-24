@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Button, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import HeroHeader from "@/components/heroHeader";
+import SharedNav from "@/components/navComponent";
 import { ApiRequestError, pingApi } from "@/services/api";
 import { colors } from "@/themes/colors";
 
@@ -28,29 +29,32 @@ export default function Home() {
 
   return (
     <ScrollView contentContainerStyle={styles.contentContainer} style={styles.container}>
-      <HeroHeader
-        eyebrow="Home snapshot"
-        title="Know what is in your fridge before you shop."
-        subtitle="Track inventory, catch expiring items, and build smarter grocery runs."
-        caption="Track your groceries and see what's in your fridge and cut waste."
-        primaryAction={{ label: "Quick add item" }}
-        secondaryAction={{ label: "Review expiring" }}
-        stats={[
-          { value: "18", label: "Tracked now" },
-          { value: "3", label: "Expiring soon" },
-          { value: "26%", label: "Waste cut" },
-        ]}
-        previewTitle="Fridge pulse"
-        previewItems={["Inventory synced", "List prepared", "Expiry watch active"]}
-      />
+      {Platform.OS === "web" ? <SharedNav /> : null}
+      <View style={styles.mainContent}>
+        <HeroHeader
+          eyebrow="Home snapshot"
+          title="Know what is in your fridge before you shop."
+          subtitle="Track inventory, catch expiring items, and build smarter grocery runs."
+          caption="Track your groceries and see what's in your fridge and cut waste."
+          primaryAction={{ label: "Quick add item" }}
+          secondaryAction={{ label: "Review expiring" }}
+          stats={[
+            { value: "18", label: "Tracked now" },
+            { value: "3", label: "Expiring soon" },
+            { value: "26%", label: "Waste cut" },
+          ]}
+          previewTitle="Fridge pulse"
+          previewItems={["Inventory synced", "List prepared", "Expiry watch active"]}
+        />
 
-      <Text style={styles.title}>Home</Text>
-      <Text style={styles.subtitle}>Welcome to the Fridge App</Text>
+        <Text style={styles.title}>Home</Text>
+        <Text style={styles.subtitle}>Welcome to the Fridge App</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.bodyText}>Your fridge summary will appear here</Text>
-        <Text style={styles.bodyText}>API status: {status}</Text>
-        <Button title="Test API Connection" onPress={testConnection} />
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>Your fridge summary will appear here</Text>
+          <Text style={styles.bodyText}>API status: {status}</Text>
+          <Button title="Test API Connection" onPress={testConnection} />
+        </View>
       </View>
     </ScrollView>
   );
@@ -61,7 +65,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   contentContainer: {
-    padding: 20,
+    paddingBottom: 20,
+    gap: 14,
+  },
+  mainContent: {
+    paddingHorizontal: 20,
     gap: 14,
   },
   title: {
