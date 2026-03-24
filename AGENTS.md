@@ -75,6 +75,10 @@ do not push new changes to GitHub without explicit permission.
 
 \### 1. Plan Mode Default
 
+\- backend tasks goes in todo_backend_md and todo_frontend.md
+
+\- Split todo.md into seperate files when it gets to crowded and name it intuitive
+
 \- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 
 \- If something goes sideways, STOP and re-plan immediately — don't keep pushing
@@ -82,7 +86,6 @@ do not push new changes to GitHub without explicit permission.
 \- Use plan mode for verification steps, not just building
 
 \- Write detailed specs upfront to reduce ambiguity
-
 
 
 
