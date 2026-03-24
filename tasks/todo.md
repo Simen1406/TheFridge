@@ -104,3 +104,27 @@
   - `npx.cmd tsc --noEmit` (frontend): passed with no type errors.
 - Risks / follow-ups:
   - Stretch mode fills width with this portrait image but can look artistically distorted on very wide monitors; if you want sharper art direction, use a wide banner asset next.
+
+# Trumf Receipt Script Refactor
+
+## Plan
+
+- [x] Inspect current receipt download flow and identify duplicated logic.
+- [x] Refactor `backend/scripts/trumf/download_recipets.py` with shared helpers and clearer structure while preserving behavior.
+- [x] Keep session/login and download behavior unchanged, only improving maintainability and readability.
+- [x] Run available backend verification command(s) and document results.
+- [x] Add review notes with changes, verification, and residual risks.
+
+## Review
+
+- Refactored `download_recipets.py` around shared helpers for receipt-row parsing, selector reuse, and target-row lookup.
+- Preserved login/session flow and end-to-end download behavior while removing duplicated row scanning/parsing logic.
+- Moved hardcoded flow values into named constants (`DEFAULT_MONTH_TO_EXPAND`, `DEFAULT_LATEST_DATE_TO_RETRIEVE`) without changing defaults.
+- Verification:
+  - `python -m compileall scripts/trumf/download_recipets.py` (backend): passed.
+  - `.\\venv\\Scripts\\python.exe -m compileall scripts/trumf/download_recipets.py` (backend): passed.
+  - `.\\venv\\Scripts\\python.exe -m pytest` (backend): no tests collected (exit code 1).
+  - `.\\venv\\Scripts\\python.exe -m ruff check .` (backend): failed (`No module named ruff`).
+  - `.\\venv\\Scripts\\python.exe -m mypy .` (backend): failed (`No module named mypy`).
+- Risks / follow-ups:
+  - `month_to_expand` default is still `"februar"`; if month labels vary by locale or target window, make it configurable from CLI args/env.

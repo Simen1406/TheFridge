@@ -1,11 +1,38 @@
+import re
 from datetime import datetime
 from pathlib import Path
-from playwright.sync_api import Locator, Page, TimeoutError, sync_playwright
-import re
+
+from playwright.sync_api import (
+    BrowserContext,
+    Locator,
+    Page,
+    TimeoutError,
+    sync_playwright,
+)
 
 RECEIPTS_URL = "https://www.trumf.no/profil/kvitteringer"
 DOWNLOAD_DIR = Path(__file__).resolve().parent / "downloads"
 SESSION_FILE = Path(__file__).resolve().parent / "trumf_session.json"
+DATE_FORMAT = "%d.%m.%Y"
+DEFAULT_MONTH_TO_EXPAND = "februar"
+DEFAULT_LATEST_DATE_TO_RETRIEVE = "17.02.2026"
+
+MONTH_HEADER_SELECTOR = (
+    "th.ws-transaction-history-table__col--description.ws-transaction-history-table__col"
+)
+ROW_SELECTOR = "tr.ws-transaction-history-table__row"
+RECEIPT_ROW_SELECTOR = (
+    "tr.ws-transaction-history-table__row:has("
+    "span.ws-transaction-history-table__description-date)"
+)
+DATE_SELECTOR = "span.ws-transaction-history-table__description-date"
+MERCHANT_SELECTOR = "span.ws-transaction-history-table__description-title"
+ROW_TOGGLE_SELECTOR = "button.ws-transaction-history-table__toggle-button"
+DETAILS_BUTTON_SELECTOR_PRIMARY = (
+    "button.ngr-button.ws-transaction-history-table__details-button.ngr-button--cancel"
+)
+DETAILS_BUTTON_SELECTOR_FALLBACK = "button.ws-transaction-history-table__details-button"
+DOWNLOAD_BUTTON_SELECTOR = "button[aria-label='downloadReceipt']"
 
 
 def login_to_site(page: Page) -> None:
@@ -29,7 +56,13 @@ def login_to_site(page: Page) -> None:
     page.wait_for_timeout(1500)
     print(f"Receipts page opened: {page.url}")
 
-def ensure_logged_in(page: Page, context) -> None:
+
+def ensure_receipts_page(page: Page) -> None:
+    if "/profil/kvitteringer" not in page.url:
+        page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+
+
+def ensure_logged_in(page: Page, context: BrowserContext) -> None:
     page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
     page.wait_for_timeout(1000)
 
@@ -43,15 +76,36 @@ def ensure_logged_in(page: Page, context) -> None:
     context.storage_state(path=str(SESSION_FILE))
     print(f"Saved new session to {SESSION_FILE}")
 
-def find_last_row_to_expand(page: Page, month: str):
-    page.wait_for_selector(
-        "th.ws-transaction-history-table__col--description.ws-transaction-history-table__col",
-        timeout=15000,
-    )
-    month_cells = page.locator(
-        "th.ws-transaction-history-table__col--description.ws-transaction-history-table__col",
-        has_text=month,
-    )
+
+def parse_transaction_date(date_text: str) -> datetime | None:
+    try:
+        return datetime.strptime(date_text, DATE_FORMAT)
+    except ValueError:
+        return None
+
+
+def get_date_text(row: Locator) -> str:
+    return row.locator(DATE_SELECTOR).first.inner_text(timeout=2000).strip()
+
+
+def get_merchant_text(row: Locator) -> str:
+    merchant_loc = row.locator(MERCHANT_SELECTOR)
+    if merchant_loc.count() == 0:
+        return "unknown-store"
+    return merchant_loc.first.inner_text(timeout=2000).strip()
+
+
+def wait_for_receipt_rows(page: Page) -> None:
+    page.wait_for_selector(ROW_SELECTOR, timeout=15000)
+
+
+def receipt_rows(page: Page) -> Locator:
+    return page.locator(RECEIPT_ROW_SELECTOR)
+
+
+def find_row_to_expand(page: Page, month: str) -> tuple[Locator, str]:
+    page.wait_for_selector(MONTH_HEADER_SELECTOR, timeout=15000)
+    month_cells = page.locator(MONTH_HEADER_SELECTOR, has_text=month)
     count = month_cells.count()
     if count == 0:
         raise ValueError(f"Could not find any month row with text '{month}'")
@@ -62,8 +116,9 @@ def find_last_row_to_expand(page: Page, month: str):
     print(f"Found month row to expand: '{month_text}'")
     return month_row, month_text
 
-def expand_row(page:Page, row: Locator) -> bool:
-    toggle_button = row.locator("button.ws-transaction-history-table__toggle-button")
+
+def expand_row(page: Page, row: Locator) -> bool:
+    toggle_button = row.locator(ROW_TOGGLE_SELECTOR)
     if toggle_button.count() > 0:
         toggle = toggle_button.first
         row.scroll_into_view_if_needed(timeout=2000)
@@ -75,31 +130,46 @@ def expand_row(page:Page, row: Locator) -> bool:
     print(f"No toggle button found in row with text '{row.inner_text(timeout=2000).strip()}', or it is already expanded.")
     return False
 
-def expand_rows_until_cutoff(page: Page, latest_date_to_retrieve: str) -> list[tuple[str, str]]:
-    last_row_to_expand, _ = find_last_row_to_expand(page, month="februar")
+
+def find_transaction_row(page: Page, target_date: str, target_merchant: str) -> Locator | None:
+    rows = receipt_rows(page)
+    for i in range(rows.count()):
+        row = rows.nth(i)
+        date_text = get_date_text(row)
+        if date_text != target_date:
+            continue
+        if get_merchant_text(row) == target_merchant:
+            return row
+    return None
+
+
+def expand_rows_until_cutoff(
+    page: Page,
+    latest_date_to_retrieve: str,
+    month_to_expand: str = DEFAULT_MONTH_TO_EXPAND,
+) -> list[tuple[str, str]]:
+    last_row_to_expand, _ = find_row_to_expand(page, month=month_to_expand)
     expand_row(page, last_row_to_expand)
 
-    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
+    wait_for_receipt_rows(page)
     rows_to_process: list[tuple[str, str]] = []
 
-    cutoff_date = datetime.strptime(latest_date_to_retrieve, "%d.%m.%Y")
-    rows = page.locator(
-        "tr.ws-transaction-history-table__row:has(span.ws-transaction-history-table__description-date)"
-    )
+    cutoff_date = datetime.strptime(latest_date_to_retrieve, DATE_FORMAT)
+    rows = receipt_rows(page)
     count = rows.count()
+
     for i in range(count):
         row = rows.nth(i)
-        date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
-        try:
-            transaction_date = datetime.strptime(date_text, "%d.%m.%Y")
-            if transaction_date >= cutoff_date:
-                merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
-                merchant_text = merchant_loc.first.inner_text(timeout=2000).strip() if merchant_loc.count() > 0 else "unknown-store"
-                rows_to_process.append((date_text, merchant_text))
-            else:
-                print(f"Skipping row with date {date_text} it is too long ago.")
-        except ValueError:
+        date_text = get_date_text(row)
+        transaction_date = parse_transaction_date(date_text)
+        if transaction_date is None:
             print(f"Could not parse date '{date_text}' in row {i}, skipping.")
+            continue
+
+        if transaction_date >= cutoff_date:
+            rows_to_process.append((date_text, get_merchant_text(row)))
+        else:
+            print(f"Skipping row with date {date_text} it is too long ago.")
 
     print(f"Total rows found: {count}")
     print(f"Rows to process: {len(rows_to_process)}")
@@ -115,26 +185,9 @@ def _safe_filename(value: str) -> str:
 def download_receipt(page: Page, target_date: str, target_merchant: str, index: int) -> bool:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-    if "/profil/kvitteringer" not in page.url:
-        page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
-
-    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
-    rows = page.locator(
-        "tr.ws-transaction-history-table__row:has(span.ws-transaction-history-table__description-date)"
-    )
-
-    target_row = None
-    for i in range(rows.count()):
-        row = rows.nth(i)
-        date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
-        if date_text != target_date:
-            continue
-
-        merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
-        merchant_text = merchant_loc.first.inner_text(timeout=2000).strip() if merchant_loc.count() > 0 else "unknown-store"
-        if merchant_text == target_merchant:
-            target_row = row
-            break
+    ensure_receipts_page(page)
+    wait_for_receipt_rows(page)
+    target_row = find_transaction_row(page, target_date, target_merchant)
 
     if target_row is None:
         print(f"[{index}] Could not find list row for {target_date} - {target_merchant}.")
@@ -143,19 +196,17 @@ def download_receipt(page: Page, target_date: str, target_merchant: str, index: 
     target_row.scroll_into_view_if_needed(timeout=2000)
     expand_row(page, target_row)
 
-    details_button = target_row.locator(
-        "button.ngr-button.ws-transaction-history-table__details-button.ngr-button--cancel"
-    ).first
+    details_button = target_row.locator(DETAILS_BUTTON_SELECTOR_PRIMARY).first
     if details_button.count() == 0:
-        details_button = target_row.locator("button.ws-transaction-history-table__details-button").first
+        details_button = target_row.locator(DETAILS_BUTTON_SELECTOR_FALLBACK).first
     if details_button.count() == 0:
         print(f"[{index}] No details button found for {target_date} - {target_merchant}.")
         return False
 
     details_button.click()
-    page.wait_for_selector("button[aria-label='downloadReceipt']", timeout=15000)
+    page.wait_for_selector(DOWNLOAD_BUTTON_SELECTOR, timeout=15000)
 
-    receipt_download_button = page.locator("button[aria-label='downloadReceipt']").first
+    receipt_download_button = page.locator(DOWNLOAD_BUTTON_SELECTOR).first
     base_name = _safe_filename(f"{target_date}_{target_merchant}_{index + 1}")
 
     with page.expect_download(timeout=20000) as download_info:
@@ -168,12 +219,11 @@ def download_receipt(page: Page, target_date: str, target_merchant: str, index: 
     print(f"[{index}] Downloaded: {target_path.name}")
 
     page.go_back(wait_until="domcontentloaded")
-    page.wait_for_selector("tr.ws-transaction-history-table__row", timeout=15000)
+    wait_for_receipt_rows(page)
     return True
 
 
-
-def run_download_flow():
+def run_download_flow() -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         context_args = {"accept_downloads": True}
@@ -192,7 +242,10 @@ def run_download_flow():
             context.storage_state(path=str(SESSION_FILE))
             print(f"Saved new session to {SESSION_FILE}")
 
-        rows_to_process = expand_rows_until_cutoff(page, latest_date_to_retrieve="17.02.2026")
+        rows_to_process = expand_rows_until_cutoff(
+            page,
+            latest_date_to_retrieve=DEFAULT_LATEST_DATE_TO_RETRIEVE,
+        )
         print(f"Ready to download {len(rows_to_process)} receipts.")
 
         downloaded = 0
