@@ -66,3 +66,41 @@
 - Risks / follow-ups:
   - CTA buttons are intentionally optional and currently have no handlers wired on pages that only need display.
   - The old `frontend/src/components/fridgeHero.tsx` remains in repo and can be removed in a cleanup pass if no longer needed.
+
+# Shared Nav Fridge Hero Accent
+
+## Plan
+
+- [x] Inspect current shared nav layout and confirm image asset source path.
+- [x] Copy `fridge header.png` into frontend assets for Expo compatibility.
+- [x] Redesign `SharedNav` with reactive image accent, responsive layout, and subtle motion.
+- [x] Verify with TypeScript check and document review notes.
+
+## Review
+
+- Copied the provided image from `C:\Users\Simen\dev\fridge header.png` to `frontend/src/assets/fridge-header.png` for reliable Expo bundling.
+- Rebuilt `SharedNav` with a more usable layout: product title/subtitle, rounded nav chips, active-route highlighting, and layered glow accents.
+- Added a subtle floating animation for the fridge image and responsive behavior that lowers image prominence on narrower widths.
+- Verification:
+  - `npx.cmd tsc --noEmit` (frontend): passed with no type errors.
+- Risks / follow-ups:
+  - Route highlighting currently matches expected Expo tab paths (`/`, `/Fridge`, `/Groceries`, `/CommonFridgeItems`); if custom route aliases are introduced, update active-path checks.
+
+# Shared Nav Full-Bleed Background + Scroll Integration
+
+## Plan
+
+- [x] Convert shared nav image treatment from corner accent to full-width background layer.
+- [x] Move web nav rendering from root layout into tab pages so it participates in page scroll.
+- [x] Preserve existing page spacing by wrapping tab content below nav where needed.
+- [x] Verify frontend typecheck and capture review notes.
+
+## Review
+
+- Reworked `SharedNav` to render `fridge-header.png` as a full-bleed animated background layer (`resizeMode="stretch"`) with tint + glows for readable foreground text.
+- Removed nav mounting from `frontend/app/_layout.tsx` and mounted it inside tab pages on web (`index`, `Fridge`, `Groceries`, `CommonFridgeItems`).
+- Updated tab pages with content wrappers so the full-width menu sits above normal padded content.
+- Verification:
+  - `npx.cmd tsc --noEmit` (frontend): passed with no type errors.
+- Risks / follow-ups:
+  - Stretch mode fills width with this portrait image but can look artistically distorted on very wide monitors; if you want sharper art direction, use a wide banner asset next.
