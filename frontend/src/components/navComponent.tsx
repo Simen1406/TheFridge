@@ -36,7 +36,7 @@ export default function SharedNav() {
   return (
     <View style={[styles.container, isCompact && styles.containerCompact]}>
       <Animated.Image
-        source={require("../assets/fridge-header.png")}
+        source={require("../assets/menuHeader.jpg")}
         resizeMode="stretch"
         style={[
           styles.backgroundImage,
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     minHeight: 190,
     justifyContent: "center",
-    paddingVertical: 16,
+    paddingVertical: 75,
     paddingHorizontal: 22,
     overflow: "hidden",
     borderBottomWidth: 1,
@@ -131,11 +131,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(67, 87, 46, 0.23)",
   },
   contentWrap: {
-    gap: 12,
+    gap: 15,
     zIndex: 2,
   },
   navHeader: {
-    gap: 5,
+    gap: 10,
   },
   navTitle: {
     color: colors.white,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   navLinks: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 15,
   },
   navLink: {
     paddingHorizontal: 14,
