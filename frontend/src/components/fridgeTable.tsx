@@ -22,8 +22,60 @@ export default function FridgeTable({
       onAddPress={onAddPress}
       onRemovePress={onRemovePress}
       isLoading={isLoading}
+      defaultSortKey="expires"
+      defaultSortDirection="asc"
+      defaultFilterKey="all"
       searchPlaceholder="Search fridge items..."
       searchableText={(item) => `${item.name} ${item.brand} ${item.ean}`}
+      sortOptions={[
+        {
+          key: "name",
+          label: "Name",
+          value: (item) => item.name,
+        },
+        {
+          key: "quantity",
+          label: "Quantity",
+          value: (item) => item.weight,
+        },
+        {
+          key: "expires",
+          label: "Expires",
+          value: (item) => parseDateValue(item.expiration_date),
+        },
+        {
+          key: "brand",
+          label: "Brand",
+          value: (item) => item.brand || "",
+        },
+      ]}
+      filterOptions={[
+        {
+          key: "all",
+          label: "All",
+          predicate: () => true,
+        },
+        {
+          key: "fresh",
+          label: "Fresh",
+          predicate: (item) => getExpiryMeta(item.expiration_date).tone === "ok",
+        },
+        {
+          key: "soon",
+          label: "Soon",
+          predicate: (item) => getExpiryMeta(item.expiration_date).tone === "warn",
+        },
+        {
+          key: "expired",
+          label: "Expired",
+          predicate: (item) => getExpiryMeta(item.expiration_date).tone === "danger",
+        },
+        {
+          key: "no-date",
+          label: "No date",
+          predicate: (item) => !item.expiration_date,
+        },
+      ]}
       columns={[
         {
           key: "name",
@@ -76,7 +128,14 @@ function formatDate(value: string | null) {
   return date.toLocaleDateString();
 }
 
-function getExpiryStatus(value: string | null): {
+function parseDateValue(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function getExpiryMeta(value: string | null): {
   label: string;
   tone: "ok" | "warn" | "danger" | "neutral";
 } {
@@ -94,4 +153,8 @@ function getExpiryStatus(value: string | null): {
   if (daysLeft < 0) return { label: "Expired", tone: "danger" };
   if (daysLeft <= 2) return { label: "Soon", tone: "warn" };
   return { label: "Fresh", tone: "ok" };
+}
+
+function getExpiryStatus(value: string | null) {
+  return getExpiryMeta(value);
 }

@@ -13,6 +13,8 @@ import { colors } from "@/themes/colors";
 import { fontFamily, fontSizes, fontWeights } from "@/themes/fonts";
 
 type CellAlign = "left" | "center" | "right";
+type SortDirection = "asc" | "desc";
+type SortValue = string | number | Date | null | undefined;
 
 type TableColumn<T> = {
   key: string;
@@ -20,6 +22,19 @@ type TableColumn<T> = {
   width?: number;
   align?: CellAlign;
   render: (item: T) => ReactNode;
+};
+
+type TableSortOption<T> = {
+  key: string;
+  label: string;
+  value: (item: T) => SortValue;
+  defaultDirection?: SortDirection;
+};
+
+type TableFilterOption<T> = {
+  key: string;
+  label: string;
+  predicate: (item: T) => boolean;
 };
 
 type InventoryTableProps<T extends { id: number }> = {
@@ -34,6 +49,11 @@ type InventoryTableProps<T extends { id: number }> = {
   searchableText?: (item: T) => string;
   emptyMessage?: string;
   isLoading?: boolean;
+  sortOptions?: TableSortOption<T>[];
+  filterOptions?: TableFilterOption<T>[];
+  defaultSortKey?: string;
+  defaultSortDirection?: SortDirection;
+  defaultFilterKey?: string;
 };
 
 function chipBackground(status: "ok" | "warn" | "danger" | "neutral") {
@@ -50,6 +70,30 @@ function chipText(status: "ok" | "warn" | "danger" | "neutral") {
   return colors.headerText;
 }
 
+function normalizeComparableValue(value: SortValue) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string") return value.toLowerCase();
+  return value;
+}
+
+function compareSortValues(left: SortValue, right: SortValue) {
+  const normalizedLeft = normalizeComparableValue(left);
+  const normalizedRight = normalizeComparableValue(right);
+
+  if (normalizedLeft == null && normalizedRight == null) return 0;
+  if (normalizedLeft == null) return 1;
+  if (normalizedRight == null) return -1;
+
+  if (typeof normalizedLeft === "number" && typeof normalizedRight === "number") {
+    return normalizedLeft - normalizedRight;
+  }
+
+  return String(normalizedLeft).localeCompare(String(normalizedRight), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 export function StatusChip({
   label,
   tone = "neutral",
@@ -58,7 +102,7 @@ export function StatusChip({
   tone?: "ok" | "warn" | "danger" | "neutral";
 }) {
   return (
-    <View style={[styles.statusChip, { backgroundColor: chipBackground(tone) }]}>
+    <View style={[styles.statusChip, { backgroundColor: chipBackground(tone) }]} accessibilityRole="text">
       <Text style={[styles.statusText, { color: chipText(tone) }]}>{label}</Text>
     </View>
   );
@@ -76,9 +120,21 @@ export default function InventoryTable<T extends { id: number }>({
   searchableText,
   emptyMessage = "No items found.",
   isLoading = false,
+  sortOptions = [],
+  filterOptions = [],
+  defaultSortKey,
+  defaultSortDirection,
+  defaultFilterKey,
 }: InventoryTableProps<T>) {
+  const initialSortOption = sortOptions.find((option) => option.key === defaultSortKey) ?? sortOptions[0];
+  const initialFilterOption = filterOptions.find((option) => option.key === defaultFilterKey) ?? filterOptions[0];
   const [query, setQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [sortKey, setSortKey] = useState(initialSortOption?.key ?? "");
+  const [sortDirection, setSortDirection] = useState<SortDirection>(
+    defaultSortDirection ?? initialSortOption?.defaultDirection ?? "asc",
+  );
+  const [filterKey, setFilterKey] = useState(initialFilterOption?.key ?? "all");
   const { width } = useWindowDimensions();
 
   const normalized = query.trim().toLowerCase();
@@ -91,14 +147,37 @@ export default function InventoryTable<T extends { id: number }>({
     return Math.max(110, Math.round(base * 0.82));
   };
 
-  const filteredItems = useMemo(() => {
-    if (!normalized) return items;
+  const activeSortOption = sortOptions.find((option) => option.key === sortKey) ?? sortOptions[0];
+  const activeFilterOption =
+    filterOptions.find((option) => option.key === filterKey) ?? filterOptions[0] ?? null;
 
-    return items.filter((item) => {
-      const value = searchableText ? searchableText(item) : JSON.stringify(item);
-      return value.toLowerCase().includes(normalized);
+  const visibleItems = useMemo(() => {
+    const textFilteredItems = !normalized
+      ? items
+      : items.filter((item) => {
+          const value = searchableText ? searchableText(item) : JSON.stringify(item);
+          return value.toLowerCase().includes(normalized);
+        });
+
+    const filterPredicate = activeFilterOption?.predicate;
+    const filteredItems = filterPredicate ? textFilteredItems.filter(filterPredicate) : textFilteredItems;
+
+    if (!activeSortOption) return filteredItems;
+
+    const directionMultiplier = sortDirection === "asc" ? 1 : -1;
+
+    return [...filteredItems].sort((left, right) => {
+      return compareSortValues(activeSortOption.value(left), activeSortOption.value(right)) * directionMultiplier;
     });
-  }, [items, normalized, searchableText]);
+  }, [activeFilterOption, activeSortOption, items, normalized, searchableText, sortDirection]);
+
+  const hasActiveFilter = Boolean(activeFilterOption && activeFilterOption.key !== "all");
+  const hasEmptyStateFilter = Boolean(hasQuery || hasActiveFilter);
+  const noResultsSubtext = hasQuery
+    ? "Try a different name, brand, or EAN."
+    : hasActiveFilter && activeFilterOption
+      ? `No rows match the ${activeFilterOption.label.toLowerCase()} filter.`
+      : "Add your first item to populate this table.";
 
   return (
     <View style={styles.screenWrap}>
@@ -111,17 +190,8 @@ export default function InventoryTable<T extends { id: number }>({
         </View>
 
         <View style={styles.toolbar}>
-          <TouchableOpacity
-            style={styles.filterButton}
-            accessibilityRole="button"
-            accessibilityLabel="Table filters"
-            accessibilityHint="Filtering will be available in the next phase"
-          >
-            <Text style={styles.filterIcon}>⚙</Text>
-          </TouchableOpacity>
-
           <View style={[styles.searchWrap, isSearchFocused && styles.searchWrapFocused]}>
-            <Text style={styles.searchIcon}>⌕</Text>
+            <Text style={styles.searchIcon}>Search</Text>
             <TextInput
               value={query}
               onChangeText={setQuery}
@@ -147,6 +217,73 @@ export default function InventoryTable<T extends { id: number }>({
           </TouchableOpacity>
         </View>
 
+        <View style={styles.controlStack}>
+          {filterOptions.length > 0 ? (
+            <View style={styles.controlSection}>
+              <Text style={styles.controlLabel}>Filter</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                {filterOptions.map((option) => {
+                  const isActive = option.key === activeFilterOption?.key;
+
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      onPress={() => setFilterKey(option.key)}
+                      style={[styles.chipButton, isActive && styles.chipButtonActive]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Filter by ${option.label}`}
+                      accessibilityState={{ selected: isActive }}
+                    >
+                      <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{option.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          {sortOptions.length > 0 ? (
+            <View style={styles.controlSection}>
+              <Text style={styles.controlLabel}>Sort</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                {sortOptions.map((option) => {
+                  const isActive = option.key === activeSortOption?.key;
+
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      onPress={() => {
+                        if (option.key === sortKey) {
+                          setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+                          return;
+                        }
+
+                        setSortKey(option.key);
+                        setSortDirection(option.defaultDirection ?? "asc");
+                      }}
+                      style={[styles.chipButton, isActive && styles.chipButtonActive]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Sort by ${option.label}`}
+                      accessibilityState={{ selected: isActive }}
+                    >
+                      <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{option.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <TouchableOpacity
+                  onPress={() => setSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+                  style={styles.directionButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Toggle sort direction, currently ${sortDirection === "asc" ? "ascending" : "descending"}`}
+                >
+                  <Text style={styles.directionButtonText}>{sortDirection === "asc" ? "Asc" : "Desc"}</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          ) : null}
+        </View>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View>
             <View style={styles.tableHeader}>
@@ -165,9 +302,7 @@ export default function InventoryTable<T extends { id: number }>({
                   {column.header}
                 </Text>
               ))}
-              <Text style={[styles.headerCell, { width: isCompact ? 88 : 104, textAlign: "right" }]}>
-                Action
-              </Text>
+              <Text style={[styles.headerCell, { width: isCompact ? 88 : 104, textAlign: "right" }]}>Action</Text>
             </View>
 
             {isLoading ? (
@@ -176,20 +311,15 @@ export default function InventoryTable<T extends { id: number }>({
                 <Text style={styles.emptyTitle}>Loading items...</Text>
                 <Text style={styles.emptySubtext}>Fetching latest table rows.</Text>
               </View>
-            ) : filteredItems.length === 0 ? (
+            ) : visibleItems.length === 0 ? (
               <View style={styles.emptyRow}>
-                <Text style={styles.emptyIcon}>⌕</Text>
-                <Text style={styles.emptyTitle}>{hasQuery ? "No results" : emptyMessage}</Text>
-                <Text style={styles.emptySubtext}>
-                  {hasQuery ? "Try a different name, brand, or EAN." : "Add your first item to populate this table."}
-                </Text>
+                <Text style={styles.emptyIcon}>Search</Text>
+                <Text style={styles.emptyTitle}>{hasEmptyStateFilter ? "No results" : emptyMessage}</Text>
+                <Text style={styles.emptySubtext}>{noResultsSubtext}</Text>
               </View>
             ) : (
-              filteredItems.map((item, index) => (
-                <View
-                  key={item.id}
-                  style={[styles.row, index % 2 === 0 ? styles.rowEven : styles.rowOdd]}
-                >
+              visibleItems.map((item, index) => (
+                <View key={item.id} style={[styles.row, index % 2 === 0 ? styles.rowEven : styles.rowOdd]}>
                   <Text style={[styles.indexCell, { width: isCompact ? 36 : 44 }]}>{index + 1}</Text>
 
                   {columns.map((column) => (
@@ -207,9 +337,9 @@ export default function InventoryTable<T extends { id: number }>({
                       style={styles.removeButton}
                       accessibilityRole="button"
                       accessibilityLabel={`Remove row ${index + 1}`}
-                      accessibilityHint="Removes this item from the table"
+                      accessibilityHint="Queues this item for removal"
                     >
-                      <Text style={styles.removeIcon}>×</Text>
+                      <Text style={styles.removeIcon}>x</Text>
                       <Text style={styles.removeButtonText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
@@ -276,25 +406,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
     flexWrap: "wrap",
-  },
-  filterButton: {
-    width: 42,
-    height: 38,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: "rgba(211, 211, 211, 0.7)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterIcon: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: fontWeights.bold,
-    fontFamily: fontFamily.body,
-    opacity: 0.9,
   },
   searchWrap: {
     flex: 1,
@@ -320,8 +433,9 @@ const styles = StyleSheet.create({
   searchIcon: {
     color: colors.primary,
     marginRight: 2,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: fontWeights.bold,
+    fontFamily: fontFamily.body,
   },
   searchInput: {
     flex: 1,
@@ -351,6 +465,64 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 18,
     fontWeight: fontWeights.bold,
+  },
+  controlStack: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  controlSection: {
+    gap: 6,
+  },
+  controlLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSizes.small + 1,
+    fontWeight: fontWeights.bold,
+    color: colors.headerText,
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
+  chipRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  chipButton: {
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "rgba(53, 78, 86, 0.2)",
+    backgroundColor: "rgba(211, 211, 211, 0.44)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSizes.small + 1,
+    fontWeight: fontWeights.medium,
+    color: colors.headerText,
+  },
+  chipTextActive: {
+    color: colors.lightGray,
+  },
+  directionButton: {
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: "rgba(211, 211, 211, 0.58)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  directionButtonText: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSizes.small + 1,
+    fontWeight: fontWeights.medium,
+    color: colors.primary,
   },
   tableHeader: {
     flexDirection: "row",
@@ -386,9 +558,6 @@ const styles = StyleSheet.create({
   },
   rowOdd: {
     backgroundColor: "rgba(211, 211, 211, 0.24)",
-  },
-  indexCol: {
-    width: 44,
   },
   indexCell: {
     width: 44,
@@ -458,6 +627,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.small + 2,
     color: colors.headerText,
     opacity: 0.8,
+    textAlign: "center",
   },
   statusChip: {
     borderRadius: 999,

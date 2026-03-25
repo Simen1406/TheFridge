@@ -104,3 +104,31 @@
   - `npx.cmd tsc --noEmit` (frontend): passed with no type errors.
 - Risks / follow-ups:
   - Stretch mode fills width with this portrait image but can look artistically distorted on very wide monitors; if you want sharper art direction, use a wide banner asset next.
+
+# Table UI Improvement Phase 2
+
+## Plan
+
+- [x] Inspect current table behaviors and identify integration points for sort/filter/delete confirmation.
+- [x] Implement reusable sort/filter controls and behavior in `frontend/src/components/inventoryTable.tsx`.
+- [x] Wire sort/filter options from fridge and grocery table adapters with established styling and good button placement.
+- [x] Add delete confirmation + undo flow in fridge and grocery tab screens before server deletion.
+- [x] Validate with Playwright E2E flow(s) and frontend typecheck; fix regressions and re-validate.
+- [x] Document review notes with verification outcomes and follow-ups.
+
+## Review
+
+- Added reusable filter and sort controls to `InventoryTable` with configurable options (`sortOptions`, `filterOptions`) and per-table defaults.
+- Wired fridge-specific controls (expiry state filters, date/name/brand/quantity sorting) and grocery-specific controls (price-band filters, price/name/brand/quantity sorting).
+- Implemented delayed delete with undo banners on both Fridge and Grocery tabs (5-second undo window before API delete).
+- Fixed empty-state messaging so `All` filter + no data shows the normal empty-state guidance instead of filter-specific wording.
+- Verification:
+  - `npx.cmd tsc --noEmit` (frontend): passed.
+  - `npm.cmd run lint` (frontend): failed, script missing.
+  - `npm.cmd run test` (frontend): failed, script missing.
+  - `npm.cmd run build` (frontend): failed, script missing.
+  - Playwright browser validation (manual flow):
+    - `/Fridge`: verified filter chips, sort direction toggling, row reordering, remove action, undo recovery banner.
+    - `/Groceries`: verified filter chips, sort switching by price, row reordering, remove action, undo recovery banner.
+- Risks / follow-ups:
+  - Current undo flow is client-managed and timer-based; if backend latency spikes or app reloads during pending deletes, user feedback could be improved with explicit toast state persistence.

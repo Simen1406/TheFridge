@@ -22,8 +22,55 @@ export default function GroceryTable({
       onAddPress={onAddPress}
       onRemovePress={onRemovePress}
       isLoading={isLoading}
+      defaultSortKey="name"
+      defaultSortDirection="asc"
+      defaultFilterKey="all"
       searchPlaceholder="Search grocery items..."
       searchableText={(item) => `${item.name} ${item.brand} ${item.ean}`}
+      sortOptions={[
+        {
+          key: "name",
+          label: "Name",
+          value: (item) => item.name,
+        },
+        {
+          key: "quantity",
+          label: "Quantity",
+          value: (item) => item.weight,
+        },
+        {
+          key: "price",
+          label: "Price",
+          value: (item) => item.price,
+        },
+        {
+          key: "brand",
+          label: "Brand",
+          value: (item) => item.brand || "",
+        },
+      ]}
+      filterOptions={[
+        {
+          key: "all",
+          label: "All",
+          predicate: () => true,
+        },
+        {
+          key: "budget",
+          label: "Budget",
+          predicate: (item) => getPriceBand(item.price).key === "budget",
+        },
+        {
+          key: "regular",
+          label: "Regular",
+          predicate: (item) => getPriceBand(item.price).key === "regular",
+        },
+        {
+          key: "high",
+          label: "High",
+          predicate: (item) => getPriceBand(item.price).key === "high",
+        },
+      ]}
       columns={[
         {
           key: "name",
@@ -74,7 +121,15 @@ function getPriceState(price: number): {
   label: string;
   tone: "ok" | "warn" | "danger" | "neutral";
 } {
-  if (price <= 30) return { label: "Budget", tone: "ok" };
-  if (price <= 70) return { label: "Regular", tone: "warn" };
-  return { label: "High", tone: "danger" };
+  return getPriceBand(price);
+}
+
+function getPriceBand(price: number): {
+  label: string;
+  tone: "ok" | "warn" | "danger" | "neutral";
+  key: "budget" | "regular" | "high";
+} {
+  if (price <= 30) return { label: "Budget", tone: "ok", key: "budget" };
+  if (price <= 70) return { label: "Regular", tone: "warn", key: "regular" };
+  return { label: "High", tone: "danger", key: "high" };
 }
