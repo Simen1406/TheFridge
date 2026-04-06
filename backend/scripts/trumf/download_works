@@ -1,0 +1,628 @@
+"""from datetime import datetime
+from pathlib import Path
+from playwright.sync_api import Locator, Page, TimeoutError, sync_playwright
+import re
+
+RECEIPTS_URL = "https://www.trumf.no/profil/kvitteringer"
+DOWNLOAD_DIR = Path(__file__).resolve().parent / "downloads"
+SESSION_FILE = Path(__file__).resolve().parent / "trumf_session.json"
+RECEIPT_ROW_SELECTOR = "tr:has(span.ws-transaction-history-table__description-date)"
+MONTH_ROW_SELECTOR = "tr:has(th.ws-transaction-history-table__col--description.ws-transaction-history-table__col:has-text('Sum for'))"
+
+
+def debug_log(message: str) -> None:
+    now = datetime.now().strftime("%H:%M:%S")
+    print(f"[DEBUG {now}] {message}")
+
+
+def debug_page_state(page: Page, label: str) -> None:
+    try:
+        frame_urls = [frame.url for frame in page.frames if frame.url]
+        visible_buttons = page.locator("button:visible")
+        button_count = min(visible_buttons.count(), 6)
+        button_labels: list[str] = []
+        for i in range(button_count):
+            try:
+                text = visible_buttons.nth(i).inner_text(timeout=500).strip()
+                if text:
+                    button_labels.append(text)
+            except Exception:
+                continue
+        debug_log(
+            f"{label} | url={page.url} | frames={len(frame_urls)} | buttons={button_labels}"
+        )
+        if frame_urls:
+            debug_log(f"{label} | frame_urls={frame_urls}")
+    except Exception as exc:
+        debug_log(f"{label} | failed to snapshot page state: {exc}")
+
+
+def login_to_site(page: Page) -> None:
+    page.goto("https://www.trumf.no", wait_until="domcontentloaded")
+    print("Login manually in the browser, including SMS code if required.")
+    input(f"Press Enter ONLY when you see the receipts page ({RECEIPTS_URL})... ")
+
+    # Avoid interrupting auth redirects (SMS/OIDC callback) by waiting for
+    # the browser to settle on the receipts URL before forcing navigation.
+    try:
+        page.wait_for_url("**/profil/kvitteringer**", timeout=15000)
+    except TimeoutError:
+        page.wait_for_timeout(1500)
+        if "/profil/kvitteringer" not in page.url:
+            try:
+                page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+            except Exception:
+                page.wait_for_url("**/profil/kvitteringer**", timeout=30000)
+
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_timeout(1500)
+    print(f"Receipts page opened: {page.url}")
+
+def ensure_logged_in(page: Page, context) -> None:
+    page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+    page.wait_for_timeout(1500)
+
+    # Session can look valid for a moment and then redirect to login.
+    # We only trust it if we remain on the receipts page after the redirect window.
+    try:
+        page.wait_for_url("**/profil/kvitteringer**", timeout=5000)
+        page.wait_for_timeout(1000)
+        if "/profil/kvitteringer" in page.url and "id.trumf.no" not in page.url:
+            print("Session loaded from disk.")
+            return
+    except TimeoutError:
+        pass
+
+    print("No valid saved session. Manual login required.")
+    login_to_site(page)
+    context.storage_state(path=str(SESSION_FILE))
+    print(f"Saved new session to {SESSION_FILE}")
+
+
+def ensure_receipts_page(page: Page, context) -> None:
+    if "id.trumf.no" in page.url or "/ui/login" in page.url:
+        print("Detected login page during flow. Re-authenticating.")
+        debug_log("ensure_receipts_page detected login URL, starting ensure_logged_in")
+        ensure_logged_in(page, context)
+        return
+
+    if "/profil/kvitteringer" not in page.url:
+        debug_log(f"ensure_receipts_page navigating back to receipts from {page.url}")
+        page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+        page.wait_for_timeout(800)
+        if "id.trumf.no" in page.url:
+            print("Redirected to login while opening receipts. Re-authenticating.")
+            debug_log("ensure_receipts_page redirected to login after goto receipts")
+            ensure_logged_in(page, context)
+
+def get_month_rows(page: Page):
+    for attempt in range(1, 4):
+        rows = page.locator(MONTH_ROW_SELECTOR)
+        try:
+            rows.first.wait_for(state="attached", timeout=5000)
+            if rows.count() > 0:
+                return rows
+        except TimeoutError:
+            pass
+
+        if "/profil/kvitteringer" not in page.url:
+            page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+        page.wait_for_timeout(1200)
+
+    raise TimeoutError(f"Could not find month rows on receipts page. Current URL: {page.url}")
+
+def expand_row(page:Page, row: Locator) -> bool:
+    toggle_button = row.locator("button.ws-transaction-history-table__toggle-button")
+    if toggle_button.count() > 0:
+        toggle = toggle_button.first
+        row.scroll_into_view_if_needed(timeout=2000)
+        aria_expanded = (toggle.get_attribute("aria-expanded") or "").lower()
+        if aria_expanded != "true":
+            toggle.click()
+            page.wait_for_timeout(250)
+            return True
+    print(f"No toggle button found in row with text '{row.inner_text(timeout=2000).strip()}', or it is already expanded.")
+    return False
+
+def get_visible_receipts(page: Page) -> list[tuple[str, str]]:
+    rows = page.locator(RECEIPT_ROW_SELECTOR)
+    receipts: list[tuple[str, str]] = []
+
+    for i in range(rows.count()):
+        row = rows.nth(i)
+        if not row.is_visible():
+            continue
+
+        date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
+        merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
+        if merchant_loc.count() > 0:
+            merchant_text = merchant_loc.first.inner_text(timeout=2000).strip()
+        else:
+            row_text = row.inner_text(timeout=2000).strip()
+            lines = [line.strip() for line in row_text.splitlines() if line.strip()]
+            merchant_text = lines[0] if lines else "unknown-store"
+        receipts.append((date_text, merchant_text))
+
+    return receipts
+
+
+def ensure_receipt_rows_available(page: Page) -> bool:
+    # First try: rows already visible from current expanded month.
+    try:
+        page.wait_for_selector(RECEIPT_ROW_SELECTOR, timeout=5000)
+        return True
+    except TimeoutError:
+        debug_log("ensure_receipt_rows_available: no visible receipt rows, trying to expand month rows")
+
+    # Fallback: expand all discovered month rows and retry.
+    try:
+        month_rows = get_month_rows(page)
+    except TimeoutError:
+        debug_log("ensure_receipt_rows_available: could not fetch month rows")
+        return False
+
+    for i in range(month_rows.count()):
+        row = month_rows.nth(i)
+        try:
+            expand_row(page, row)
+        except Exception:
+            continue
+
+    page.wait_for_timeout(400)
+    try:
+        page.wait_for_selector(RECEIPT_ROW_SELECTOR, timeout=10000)
+        return True
+    except TimeoutError:
+        debug_page_state(page, "ensure_receipt_rows_available failed after expanding months")
+        return False
+
+
+def download_receipts_month_by_month(page: Page, context, latest_date_to_retrieve: str) -> tuple[int, int]:
+    cutoff_date = datetime.strptime(latest_date_to_retrieve, "%d.%m.%Y")
+    month_index = 0
+    total_candidates = 0
+    downloaded = 0
+    seen_receipts: set[tuple[str, str]] = set()
+    download_index = 0
+
+    while True:
+        ensure_receipts_page(page, context)
+        month_rows = get_month_rows(page)
+        if month_index >= month_rows.count():
+            break
+
+        month_row = month_rows.nth(month_index)
+        month_text = month_row.inner_text(timeout=2000).strip()
+        print(f"Expanding month row: {month_text}")
+        expand_row(page, month_row)
+        page.wait_for_timeout(250)
+
+        month_receipts = get_visible_receipts(page)
+        valid_for_download: list[tuple[str, str]] = []
+        reached_cutoff_in_this_month = False
+
+        for date_text, merchant_text in month_receipts:
+            receipt_key = (date_text, merchant_text)
+            if receipt_key in seen_receipts:
+                continue
+
+            try:
+                transaction_date = datetime.strptime(date_text, "%d.%m.%Y")
+            except ValueError:
+                print(f"Could not parse date '{date_text}', skipping.")
+                continue
+
+            if transaction_date >= cutoff_date:
+                valid_for_download.append((date_text, merchant_text))
+                seen_receipts.add(receipt_key)
+            else:
+                reached_cutoff_in_this_month = True
+
+        print(
+            f"Month '{month_text}': found {len(month_receipts)} receipts, "
+            f"{len(valid_for_download)} are on/after cutoff {latest_date_to_retrieve}"
+        )
+
+        total_candidates += len(valid_for_download)
+        for date_text, merchant_text in valid_for_download:
+            try:
+                ensure_receipts_page(page, context)
+                month_rows = get_month_rows(page)
+                if month_index < month_rows.count():
+                    expand_row(page, month_rows.nth(month_index))
+                    page.wait_for_timeout(250)
+                if download_receipt(page, context, date_text, merchant_text, download_index):
+                    downloaded += 1
+                download_index += 1
+            except TimeoutError:
+                print(f"Download timed out for {date_text} - {merchant_text}.")
+            except Exception as exc:
+                print(f"Download failed for {date_text} - {merchant_text}: {exc}")
+
+        if reached_cutoff_in_this_month:
+            print("Reached rows older than cutoff date. Stopping at this month.")
+            break
+
+        if len(valid_for_download) == 0:
+            print("No receipts found for this month row, trying next month.")
+
+        month_index += 1
+
+    return downloaded, total_candidates
+
+
+def _safe_filename(value: str) -> str:
+    cleaned = re.sub(r"[\\/:*?\"<>|]+", "_", value)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned or "receipt"
+
+
+def normalize_text(value: str) -> str:
+    return " ".join(value.split()).strip().casefold()
+
+
+def _find_download_button_in_scope(scope) -> Locator | None:
+    selectors = [
+        "#downloadReceipt",
+        "button[id='downloadReceipt']",
+        "button[id*='download' i]",
+        "button[aria-label='downloadReceipt']",
+        "button[aria-label*='download' i]",
+        "button.ws-transaction-details-purchase-header__download-button",
+        "button:has(use[href*='download-arrow'])",
+        "button:has-text('Last ned kvittering')",
+        "button:has-text('Last ned')",
+    ]
+
+    for selector in selectors:
+        matches = scope.locator(selector)
+        count = matches.count()
+        for i in range(count):
+            candidate = matches.nth(i)
+            try:
+                if candidate.is_visible(timeout=1000):
+                    return candidate
+            except Exception:
+                continue
+
+    return None
+
+
+def find_download_button(page: Page) -> Locator | None:
+    # Receipt detail UI can render with delay and/or inside frames.
+    for _ in range(20):  # ~10s total
+        button = _find_download_button_in_scope(page)
+        if button is not None:
+            debug_log("find_download_button found button in main page scope")
+            return button
+
+        for frame in page.frames:
+            try:
+                button = _find_download_button_in_scope(frame)
+                if button is not None:
+                    print(f"Found download button inside frame: {frame.url}")
+                    debug_log(f"find_download_button found button in frame: {frame.url}")
+                    return button
+            except Exception:
+                continue
+
+        page.wait_for_timeout(500)
+
+    debug_page_state(page, "find_download_button exhausted polling")
+    return None
+
+
+def return_to_receipts_list(page: Page, context) -> None:
+    debug_page_state(page, "return_to_receipts_list start")
+    try:
+        back_link = page.locator("a:has-text('Tilbake til kvitteringer')")
+        if back_link.count() > 0:
+            try:
+                debug_log("return_to_receipts_list clicking back link")
+                back_link.first.click()
+                page.wait_for_selector(MONTH_ROW_SELECTOR, timeout=12000)
+                debug_page_state(page, "return_to_receipts_list after back link")
+                return
+            except Exception:
+                debug_log("return_to_receipts_list back link click failed, trying fallback")
+                pass
+
+        # Fallback when no explicit back-link exists (or click failed)
+        if "/profil/kvitteringer" not in page.url:
+            try:
+                debug_log("return_to_receipts_list using page.go_back fallback")
+                page.go_back(wait_until="domcontentloaded", timeout=8000)
+            except Exception:
+                debug_log("return_to_receipts_list go_back failed")
+                pass
+
+        ensure_receipts_page(page, context)
+        try:
+            page.wait_for_selector(MONTH_ROW_SELECTOR, timeout=10000)
+            debug_page_state(page, "return_to_receipts_list month selector ready")
+        except TimeoutError:
+            debug_log("return_to_receipts_list month selector timeout, forcing goto receipts")
+            page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+            ensure_receipts_page(page, context)
+            page.wait_for_selector(MONTH_ROW_SELECTOR, timeout=12000)
+            debug_page_state(page, "return_to_receipts_list after forced goto")
+    except Exception as exc:
+        print(f"Return to receipts list required hard reset: {exc}")
+        debug_log(f"return_to_receipts_list hard reset exception: {exc}")
+        try:
+            page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+            ensure_receipts_page(page, context)
+            page.wait_for_selector(MONTH_ROW_SELECTOR, timeout=12000)
+            debug_page_state(page, "return_to_receipts_list hard reset success")
+        except Exception as inner_exc:
+            print(f"Return to receipts list failed after hard reset: {inner_exc}")
+            debug_log(f"return_to_receipts_list hard reset failed: {inner_exc}")
+
+
+def wait_for_receipt_detail_view(page: Page, timeout_ms: int = 10000) -> bool:
+    deadline = datetime.now().timestamp() + (timeout_ms / 1000)
+    detail_selectors = [
+        "a:has-text('Tilbake til kvitteringer')",
+        "#downloadReceipt",
+        "button.ws-transaction-details-purchase-header__download-button",
+        "button:has-text('Last ned kvittering')",
+    ]
+
+    while datetime.now().timestamp() < deadline:
+        for selector in detail_selectors:
+            try:
+                if page.locator(selector).count() > 0:
+                    return True
+            except Exception:
+                pass
+
+            for frame in page.frames:
+                try:
+                    if frame.locator(selector).count() > 0:
+                        return True
+                except Exception:
+                    continue
+        page.wait_for_timeout(400)
+
+    return False
+
+
+def download_receipt(page: Page, context, target_date: str, target_merchant: str, index: int) -> bool:
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    download_succeeded = False
+    try:
+        debug_log(f"[{index}] Start receipt flow for {target_date} - {target_merchant}")
+        debug_page_state(page, f"[{index}] before ensure_receipts_page")
+        ensure_receipts_page(page, context)
+        debug_page_state(page, f"[{index}] after ensure_receipts_page")
+
+        if not ensure_receipt_rows_available(page):
+            debug_log(f"[{index}] No receipt rows available before matching.")
+            return False
+        rows = page.locator(RECEIPT_ROW_SELECTOR)
+
+        target_row = None
+        normalized_target_merchant = normalize_text(target_merchant)
+        date_rows: list[Locator] = []
+        for i in range(rows.count()):
+            row = rows.nth(i)
+            if not row.is_visible():
+                continue
+            date_text = row.locator("span.ws-transaction-history-table__description-date").first.inner_text(timeout=2000).strip()
+            if date_text == target_date:
+                date_rows.append(row)
+        debug_log(f"[{index}] Candidate rows for date {target_date}: {len(date_rows)}")
+
+        for row in date_rows:
+            merchant_loc = row.locator("span.ws-transaction-history-table__description-title")
+            if merchant_loc.count() > 0:
+                merchant_text = merchant_loc.first.inner_text(timeout=2000).strip()
+            else:
+                row_text = row.inner_text(timeout=2000).strip()
+                lines = [line.strip() for line in row_text.splitlines() if line.strip()]
+                merchant_text = lines[0] if lines else "unknown-store"
+
+            normalized_row_merchant = normalize_text(merchant_text)
+            if (
+                normalized_row_merchant == normalized_target_merchant
+                or normalized_target_merchant in normalized_row_merchant
+                or normalized_row_merchant in normalized_target_merchant
+            ):
+                target_row = row
+                break
+
+        if target_row is None and len(date_rows) > 0:
+            target_row = date_rows[0]
+            print(f"[{index}] Fallback to date-only match for {target_date}.")
+
+        if target_row is None:
+            print(f"[{index}] Could not find list row for {target_date} - {target_merchant}.")
+            debug_page_state(page, f"[{index}] missing target row")
+            return False
+
+        target_row.scroll_into_view_if_needed(timeout=2000)
+
+        details_button = target_row.locator("button.ws-transaction-history-table__details-button").first
+        if details_button.count() == 0:
+            details_button = target_row.locator("button.ngr-button.ws-transaction-history-table__details-button.ngr-button--cancel").first
+        if details_button.count() == 0:
+            details_button = target_row.locator("button:has-text('Detalj')").first
+        if details_button.count() == 0:
+            details_button = target_row.locator("button[aria-label*='detalj' i]").first
+        if details_button.count() == 0:
+            print(f"[{index}] No details button found for {target_date} - {target_merchant}.")
+            return False
+
+        details_opened = False
+        for attempt in range(2):
+            try:
+                if attempt == 0:
+                    debug_log(f"[{index}] clicking details button attempt 1")
+                    details_button.click()
+                else:
+                    debug_log(f"[{index}] clicking details button attempt 2 (force)")
+                    details_button.click(force=True)
+            except Exception:
+                debug_log(f"[{index}] details click attempt {attempt + 1} threw")
+                continue
+
+            if wait_for_receipt_detail_view(page, timeout_ms=12000):
+                details_opened = True
+                debug_page_state(page, f"[{index}] detail view opened")
+                break
+
+        if not details_opened:
+            print(f"[{index}] Detail view did not open for {target_date} - {target_merchant}.")
+            debug_page_state(page, f"[{index}] detail view failed")
+            return False
+
+        receipt_download_button = find_download_button(page)
+        if receipt_download_button is None:
+            buttons = page.locator("button:visible")
+            button_count = min(buttons.count(), 8)
+            visible_labels: list[str] = []
+            for i in range(button_count):
+                try:
+                    label = buttons.nth(i).inner_text(timeout=1000).strip()
+                    if label:
+                        visible_labels.append(label)
+                except Exception:
+                    continue
+            if visible_labels:
+                print(f"[{index}] Visible buttons in detail view: {visible_labels}")
+            frame_urls = [frame.url for frame in page.frames if frame.url]
+            if frame_urls:
+                print(f"[{index}] Active frame URLs: {frame_urls}")
+            print(f"[{index}] Current URL while missing download button: {page.url}")
+            print(f"[{index}] No download button found for {target_date} - {target_merchant}.")
+            debug_page_state(page, f"[{index}] missing download button")
+            return False
+
+        base_name = _safe_filename(f"{target_date}_{target_merchant}_{index + 1}")
+        target_path = DOWNLOAD_DIR / f"{base_name}.pdf"
+
+        # Slow receipts (often KIWI) can need more than one click/timeout window.
+        for attempt in range(3):
+            try:
+                timeout_ms = 45000 if attempt == 0 else 30000
+                debug_log(f"[{index}] expect_download attempt {attempt + 1}, timeout={timeout_ms}ms")
+                with page.expect_download(timeout=timeout_ms) as download_info:
+                    if attempt == 0:
+                        receipt_download_button.click()
+                    else:
+                        receipt_download_button.click(force=True)
+                download = download_info.value
+                extension = Path(download.suggested_filename).suffix or ".pdf"
+                target_path = DOWNLOAD_DIR / f"{base_name}{extension}"
+                download.save_as(str(target_path))
+                suffix = "" if attempt == 0 else f" (retry {attempt})"
+                print(f"[{index}] Downloaded via browser event{suffix}: {target_path.name}")
+                debug_log(f"[{index}] browser download event success on attempt {attempt + 1}")
+                download_succeeded = True
+                break
+            except TimeoutError:
+                debug_log(f"[{index}] expect_download timeout on attempt {attempt + 1}")
+                if attempt < 2:
+                    continue
+
+                print(f"[{index}] No download event yet. Trying popup/navigation fallback.")
+                popup = None
+                try:
+                    debug_log(f"[{index}] trying popup fallback")
+                    with page.expect_popup(timeout=15000) as popup_info:
+                        receipt_download_button.click(force=True)
+                    popup = popup_info.value
+                    debug_log(f"[{index}] popup opened with url={popup.url}")
+                    try:
+                        popup.wait_for_load_state("domcontentloaded", timeout=12000)
+                    except TimeoutError:
+                        debug_log(f"[{index}] popup load_state timeout")
+                        pass
+                except TimeoutError:
+                    debug_log(f"[{index}] popup fallback timed out, trying force click + current URL")
+                    receipt_download_button.click(force=True)
+                    page.wait_for_timeout(2000)
+
+                pdf_url = popup.url if popup is not None else page.url
+                debug_log(f"[{index}] fallback file URL candidate: {pdf_url}")
+                if not pdf_url:
+                    print(f"[{index}] Could not determine file URL after click.")
+                    if popup is not None:
+                        popup.close()
+                    break
+
+                try:
+                    response = page.context.request.get(pdf_url, timeout=30000)
+                except TimeoutError:
+                    print(f"[{index}] Timed out fetching file URL: {pdf_url}")
+                    debug_log(f"[{index}] request.get timeout for URL: {pdf_url}")
+                    if popup is not None:
+                        popup.close()
+                    break
+
+                if not response.ok:
+                    print(f"[{index}] File fetch failed from {pdf_url} (status {response.status}).")
+                    debug_log(f"[{index}] request.get non-ok status={response.status}, content-type={response.headers.get('content-type')}")
+                    if popup is not None:
+                        popup.close()
+                    break
+
+                content_type = (response.headers.get("content-type") or "").lower()
+                debug_log(f"[{index}] request.get ok content-type={content_type}")
+                if "jpeg" in content_type or "jpg" in content_type:
+                    target_path = DOWNLOAD_DIR / f"{base_name}.jpg"
+                elif "png" in content_type:
+                    target_path = DOWNLOAD_DIR / f"{base_name}.png"
+
+                target_path.write_bytes(response.body())
+                print(f"[{index}] Downloaded via URL fetch: {target_path.name}")
+                download_succeeded = True
+                if popup is not None:
+                    popup.close()
+                break
+    except TimeoutError:
+        print(f"[{index}] Download flow timed out for {target_date} - {target_merchant}.")
+        debug_page_state(page, f"[{index}] outer timeout in download_receipt")
+        download_succeeded = False
+    finally:
+        return_to_receipts_list(page, context)
+        debug_log(f"[{index}] End receipt flow success={download_succeeded}")
+
+    return download_succeeded
+
+
+
+def run_download_flow():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+        context_args = {"accept_downloads": True}
+        if SESSION_FILE.exists():
+            context_args["storage_state"] = str(SESSION_FILE)
+
+        context = browser.new_context(**context_args)
+        page = context.new_page()
+        page.goto(RECEIPTS_URL, wait_until="domcontentloaded")
+
+        if SESSION_FILE.exists():
+            ensure_logged_in(page, context)
+        else:
+            print("No saved session file found. Manual login required.")
+            login_to_site(page)
+            context.storage_state(path=str(SESSION_FILE))
+            print(f"Saved new session to {SESSION_FILE}")
+
+        downloaded, total_candidates = download_receipts_month_by_month(
+            page,
+            context,
+            latest_date_to_retrieve="17.02.2026",
+        )
+        print(f"Downloaded {downloaded}/{total_candidates} receipts to {DOWNLOAD_DIR}")
+
+        page.close()
+        context.close()
+        browser.close()
+
+
+if __name__ == "__main__":
+    run_download_flow()
+"""

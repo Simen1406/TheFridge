@@ -5,6 +5,7 @@
 - [ ] Baseline current Trumf receipt flow in `backend` (auth/session handling, fetch endpoints, parsing, persistence) and document exact failure points.
 - [ ] Stabilize Trumf login/session lifecycle so receipt fetch works across typical edge cases (expired session, missing MFA step, transient HTTP failures).
 - [ ] Finalize Trumf receipt extraction pipeline: normalize fields, deduplicate by stable receipt key, and map to backend response model.
+- [ ] Add duplicate-download guard in `scripts/trumf/download_recipets.py`: before downloading a receipt, check whether it already exists locally (same stable receipt key/filename) and skip with clear log message.
 - [ ] Add or tighten backend tests for Trumf flow (happy path + key failure paths) using existing test patterns.
 - [ ] Add observability for Trumf runs (structured logs with safe/redacted identifiers) to speed up debugging.
 - [x] Investigate REMA1000 receipt access options: official APIs, web portal endpoints, export formats, and authentication constraints.
